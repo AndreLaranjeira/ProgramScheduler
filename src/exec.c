@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include "../util/console.h"
+#include "../include/console.h"
 
 int main(int argc, char **argv){
 

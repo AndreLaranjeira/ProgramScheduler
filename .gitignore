@@ -12,6 +12,12 @@ CMakeCache.txt
 *.cbp
 Makefile
 
+# Executables
+exec
+node
+scheduler
+shutdown
+
 # Object files:
 *.o
 *.obj
