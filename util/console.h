@@ -45,7 +45,11 @@
 
 #define RESET   "\x1b[0m"
 
-static void success(const char *msg_fmt, ...){
+static void success(const char *context, const char *msg_fmt, ...){
+    if(context != NULL){
+        printf("[%s]: ", context);
+    }
+
     printf(TEXT_COLOR_GREEN "[SUCCESS] ");
     va_list arg_list;
     va_start(arg_list, msg_fmt);
@@ -54,7 +58,11 @@ static void success(const char *msg_fmt, ...){
     printf(RESET);
 }
 
-static void error(const char* msg_fmt,...) {
+static void error(const char *context, const char* msg_fmt,...) {
+    if(context != NULL){
+        printf("[%s]: ", context);
+    }
+
     printf(TEXT_COLOR_RED "[ERROR] ");
     va_list arg_list;
     va_start(arg_list, msg_fmt);
@@ -63,16 +71,11 @@ static void error(const char* msg_fmt,...) {
     printf(RESET);
 }
 
-static void fatal(const char* msg_fmt,...) {
-    printf(BKGD_COLOR_RED TEXT_BCOLOR_YELLOW "[FATAL] ");
-    va_list arg_list;
-    va_start(arg_list, msg_fmt);
-    vprintf(msg_fmt, arg_list);
-    va_end(arg_list);
-    printf(RESET);
-}
+static void info(const char *context, const char* msg_fmt,...) {
+    if(context != NULL){
+        printf("[%s]: ", context);
+    }
 
-static void info(const char* msg_fmt,...) {
     printf(TEXT_COLOR_BLUE "[INFO] ");
     va_list arg_list;
     va_start(arg_list, msg_fmt);
@@ -81,7 +84,11 @@ static void info(const char* msg_fmt,...) {
     printf(RESET);
 }
 
-static void warning(const char* msg_fmt,...) {
+static void warning(const char *context, const char* msg_fmt,...) {
+    if(context != NULL){
+        printf("[%s]: ", context);
+    }
+
     printf(TEXT_BCOLOR_YELLOW "[WARNING] ");
     va_list arg_list;
     va_start(arg_list, msg_fmt);
@@ -90,7 +97,11 @@ static void warning(const char* msg_fmt,...) {
     printf(RESET);
 }
 
-static void message(const char* msg_fmt,...){
+static void message(const char *context, const char* msg_fmt,...){
+    if(context != NULL){
+        printf("[%s]: ", context);
+    }
+
     va_list arg_list;
     va_start(arg_list, msg_fmt);
     vprintf(msg_fmt, arg_list);
