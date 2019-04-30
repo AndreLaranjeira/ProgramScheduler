@@ -1,3 +1,28 @@
+/**
+ *  File: console.h
+ *  Description: This header contains some static functions to print custom messages on the terminal using ANSI escape characters
+ *
+ *  Available methods: success (green), error (red), warning (yellow), info (blue), message (default print)
+ *
+ *  Prototype: void success(const char *context, const char *msg_fmt, ...);
+ *
+ *  Arguments:
+ *      # context: string that will represent from where the function is being called.
+ *          # You must nullify this argument in case you don't to inform the current context
+ *
+ *      # msg_fmt: string that will interpolate a message to print
+ *          # The following arguments are use to interpolate your message
+ *          # This has the exactly same behavior as a printf
+ *
+ *  Examples:
+ *      success("main", "A = %d", A);
+ *      >> [main]: [SUCCESS] A = 10
+ *
+ *
+ *      success(NULL, "A = %d", A);
+ *      >> [SUCCESS] A = 10
+ * */
+
 #ifndef CONSOLE_H
 #define CONSOLE_H
 
