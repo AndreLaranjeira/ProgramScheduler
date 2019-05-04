@@ -5,7 +5,7 @@ int main(int argc, char **argv){
 
     int a = 2;
 
-    warning("Exec process", "Task done %d\n", a);
+    warning("Execute process", "Task done %d\n", a);
 
     // available messages: success (green), error (red), warning (yellow), info (blue), message (default print)
 
