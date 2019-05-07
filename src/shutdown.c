@@ -10,10 +10,12 @@
 int main(void){
 
   // Variable declaration:
-  char context[20] = "Shutdown process";
+  char context[] = "Shutdown";
 
   message(context,
           "Program scheduler shutting down...\n");
+
+  //TODO: Do all stuff
 
   success(context,
           "Program scheduler shutdown is complete!\n");
