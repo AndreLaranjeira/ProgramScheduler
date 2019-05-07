@@ -1,9 +1,25 @@
+// Program scheduler - Shutdown process.
+
+// Includes:
 #include <stdio.h>
+#include <stdlib.h>
 
-int main(int argc, char **argv){
+// User includes:
+#include "../include/console.h"
 
-    printf("Hello, world!\n");
+int main(void){
 
-    return 0;
+  // Variable declaration:
+  char context[] = "Shutdown";
+
+  message(context,
+          "Program scheduler shutting down...\n");
+
+  //TODO: Do all stuff
+
+  success(context,
+          "Program scheduler shutdown is complete!\n");
+
+  return 0;
 
 }

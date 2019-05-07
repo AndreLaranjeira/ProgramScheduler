@@ -1,15 +1,34 @@
+// Program scheduler - Execution process.
+
+// Includes:
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+// User includes:
 #include "../include/console.h"
 
+// Main function:
 int main(int argc, char **argv){
 
-    int a = 2;
+  // Variable declaration:
+  char context[] = "Execute";
+  unsigned long delay;
 
-    warning("Execute process", "Task done %d\n", a);
+  // Argument handling:
+  if(argc < 3) {
+    error(context,
+          "Wrong argument count.\n\nUsage: ./execute <program_name> [optional_args] <delay>.\n");
+    exit(1);
+  }
 
-    // available messages: success (green), error (red), warning (yellow), info (blue), message (default print)
+  delay = strtoul(argv[argc - 1], NULL, 0);         // Delay is always the last argument.
 
 
+  success(context,
+          "Program '%s' scheduled for execution in at least %u seconds!\n",
+          argv[1], delay);
 
-    return 0;
+  return 0;
+
 }
