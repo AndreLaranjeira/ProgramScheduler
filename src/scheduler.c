@@ -40,7 +40,7 @@ int main(int argc, char **argv){
     int msqid_top_level, msqid_nodes;
     topology topology_options[] = {{"hypercube", &create_hypercube_topology},
                                    {"torus", &create_torus_topology},
-                                   {"fat_tree", &create_fat_tree_topology}};
+                                   {"tree", &create_fat_tree_topology}};
     topology selected_topology = {"", NULL};
 
     // Arguments number handling:
@@ -54,6 +54,7 @@ int main(int argc, char **argv){
     for(int i=0; i < (sizeof(topology_options)/sizeof(topology)); i++){
         if(strcmp(topology_options[i].name, argv[1]) == 0){
             selected_topology = topology_options[i];
+            break;
         }
     }
 
