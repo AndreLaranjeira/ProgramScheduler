@@ -20,7 +20,7 @@ int main(int argc, char **argv){
     // Variables declaration
     const char context[] = "Scheduler";
     const char arg_1_topologies[] = "hypercube, torus, fat_tree";
-    char *selecte_topology;
+    char *selected_topology;
     int msqid_top_level, msqid_nodes;
 
     // Arguments number handling:
@@ -34,10 +34,12 @@ int main(int argc, char **argv){
     if(strstr(arg_1_topologies, argv[1]) == NULL){
         error(context,
                 "Wrong topology argument. \nPlease choose between %s\n", arg_1_topologies);
+
+        exit(2);
     }else{
-        selecte_topology = argv[1];
+        selected_topology = argv[1];
         success(context,
-                "...Starting scheduler with %s topology\n", selecte_topology);
+                "...Starting scheduler with %s topology\n", selected_topology);
     }
 
     // Create messages queue for shutdown, execute and scheduler to communicate
