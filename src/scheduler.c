@@ -24,13 +24,24 @@ int initialize_msq_nodes();
 void destroy_msq_top_level(int msqid_top_level);
 void destroy_msq_nodes(int msqid_nodes);
 
+int create_hypercube_topology(int);
+int create_torus_topology(int);
+int create_fat_tree_topology(int);
+
+typedef struct topology_name_function{
+    char* name;
+    int (*function)(int);
+}topology;
+
 // Main function:
 int main(int argc, char **argv){
 
     // Variables declaration
-    const char arg_1_topologies[] = "hypercube, torus, fat_tree";
-    char *selected_topology;
     int msqid_top_level, msqid_nodes;
+    topology topology_options[] = {{"hypercube", &create_hypercube_topology},
+                                   {"torus", &create_torus_topology},
+                                   {"fat_tree", &create_fat_tree_topology}};
+    topology selected_topology = {"", NULL};
 
     // Arguments number handling:
     if(argc != 2){
@@ -40,15 +51,18 @@ int main(int argc, char **argv){
     }
 
     // Topology argument handling:
-    if(strstr(arg_1_topologies, argv[1]) == NULL || strchr(argv[1], ',') != NULL){
-        error(CONTEXT,
-                "Wrong topology argument. \nPlease choose between %s\n", arg_1_topologies);
+    for(int i=0; i < (sizeof(topology_options)/sizeof(topology)); i++){
+        if(strcmp(topology_options[i].name, argv[1]) == 0){
+            selected_topology = topology_options[i];
+        }
+    }
 
-        exit(2);
-    }else{
-        selected_topology = argv[1];
+    if(selected_topology.function != NULL){
         success(CONTEXT,
-                "...Starting scheduler with %s topology\n", selected_topology);
+                "...Starting scheduler with %s topology\n", selected_topology.name);
+    }else{
+        error(CONTEXT, "Wrong topology argument.");
+        exit(2);
     }
 
     // Create messages queue for shutdown, execute and scheduler to communicate
@@ -59,6 +73,8 @@ int main(int argc, char **argv){
 
 
     // TODO - neste ponto a fila esta criada use-a com sabedoria!
+
+    selected_topology.function(1);
 
 
     // Destroy messages queue of shutdown, execute and scheduler
@@ -72,6 +88,17 @@ int main(int argc, char **argv){
 
 }
 
+int create_hypercube_topology(int msqid_nodes){
+    printf("\ncreate hypercube here\n");
+}
+
+int create_torus_topology(int msqid_nodes){
+    printf("\ncreate torus here\n");
+}
+
+int create_fat_tree_topology(int msqid_nodes){
+    printf("\ncreate fat tree here\n");
+}
 
 int initialize_msq_top_level(){
     int msqid_top_level;
@@ -80,7 +107,7 @@ int initialize_msq_top_level(){
         info(CONTEXT,
              "Messages queue for shutdown, execute and scheduler created with success!\n");
     }else{
-        warning(CONTEXT,
+        error(CONTEXT,
                 "An error occur trying to create a messages queue for shutdown, execute and scheduler !\n");
         exit(3);
     }
@@ -95,7 +122,7 @@ int initialize_msq_nodes(){
         info(CONTEXT,
              "Messages queue for nodes and scheduler created with success!\n");
     }else{
-        warning(CONTEXT,
+        error(CONTEXT,
                 "An error occur trying to create a messages queue for nodes and scheduler !\n");
         exit(4);
     }
@@ -108,7 +135,7 @@ void destroy_msq_top_level(int msqid_top_level){
         info(CONTEXT,
              "Messages queue for shutdown, execute and scheduler destroyed with success!\n");
     }else{
-        warning(CONTEXT,
+        error(CONTEXT,
                 "An error occur trying to destroy a messages queue for shutdown, execute and scheduler !\n");
         exit(5);
     }
@@ -119,7 +146,7 @@ void destroy_msq_nodes(int msqid_nodes){
         info(CONTEXT,
              "Messages queue for nodes and scheduler destroyed with success!\n");
     }else{
-        warning(CONTEXT,
+        error(CONTEXT,
                 "An error occur trying to destroy a messages queue for nodes and scheduler !\n");
         exit(6);
     }
