@@ -61,7 +61,7 @@ int main(int argc, char **argv){
         success(CONTEXT,
                 "...Starting scheduler with %s topology\n", selected_topology.name);
     }else{
-        error(CONTEXT, "Wrong topology argument.");
+        error(CONTEXT, "Wrong topology argument.\n");
         exit(2);
     }
 
