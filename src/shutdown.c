@@ -6,6 +6,7 @@
 
 // User includes:
 #include "../include/console.h"
+#include "../include/data_structures.h"
 
 int main(void){
 

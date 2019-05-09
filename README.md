@@ -12,3 +12,9 @@ André Laranjeira | 16/0023777
 Hugo Nascimento Fonseca | 16/0008166
 José Luiz Gomes Nogueira | 16/0032458
 Victor André Gris Costa | 16/0019311
+
+### Instruções de Compilação
+
+1. Entre na pasta raiz do projeto
+2. Execute o comando `cmake CMakeLists.txt`
+3. Execute `make [nome do executável]`
