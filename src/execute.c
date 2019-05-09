@@ -34,7 +34,7 @@ int main(int argc, char **argv){
   }
 
   delay = strtoul(argv[argc - 1], &err_check, 0);         // Delay is always the last argument.
-  if(argv[argc-1] == err_check){
+  if(argv[argc-1] == err_check || argv[argc-1][0] == '-'){
       error(CONTEXT,
               "Unable to decode delay value\n");
       exit(1);
