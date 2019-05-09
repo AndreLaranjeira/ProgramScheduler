@@ -1,6 +1,8 @@
+// Compiler includes
 #include <stdio.h>
 
-#include "../include/data_structures.h"
+// Project includes
+#include "data_structures.h"
 
 int main(int argc, char **argv){
 
