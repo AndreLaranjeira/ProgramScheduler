@@ -24,13 +24,13 @@ int initialize_msq_nodes();
 void destroy_msq_top_level(int msqid_top_level);
 void destroy_msq_nodes(int msqid_nodes);
 
-int create_hypercube_topology(int);
-int create_torus_topology(int);
-int create_fat_tree_topology(int);
+int init_hypercube_topology();
+int init_torus_topology();
+int init_fat_tree_topology();
 
 typedef struct topology_name_function{
     char* name;
-    int (*function)(int);
+    int (*init)();
 }topology;
 
 // Main function:
@@ -38,10 +38,11 @@ int main(int argc, char **argv){
 
     // Variables declaration
     int msqid_top_level, msqid_nodes;
-    topology topology_options[] = {{"hypercube", &create_hypercube_topology},
-                                   {"torus", &create_torus_topology},
-                                   {"tree", &create_fat_tree_topology}};
+    topology topology_options[] = {{"hypercube", &init_hypercube_topology},
+                                   {"torus", &init_torus_topology},
+                                   {"tree", &init_fat_tree_topology}};
     topology selected_topology = {"", NULL};
+    char previews_topologies[80] = "";
 
     // Arguments number handling:
     if(argc != 2){
@@ -52,17 +53,20 @@ int main(int argc, char **argv){
 
     // Topology argument handling:
     for(int i=0; i < (sizeof(topology_options)/sizeof(topology)); i++){
+        strcat(previews_topologies, topology_options[i].name);
+        strcat(previews_topologies, "\n");
+
         if(strcmp(topology_options[i].name, argv[1]) == 0){
             selected_topology = topology_options[i];
             break;
         }
     }
 
-    if(selected_topology.function != NULL){
+    if(selected_topology.init != NULL){
         success(CONTEXT,
-                "...Starting scheduler with %s topology\n", selected_topology.name);
+                "Starting scheduler with %s topology...\n", selected_topology.name);
     }else{
-        error(CONTEXT, "Wrong topology argument.\n");
+        error(CONTEXT, "Wrong topology argument. Choose one of that topologies: \n%s", previews_topologies);
         exit(2);
     }
 
@@ -75,7 +79,8 @@ int main(int argc, char **argv){
 
     // TODO - neste ponto a fila esta criada use-a com sabedoria!
 
-    selected_topology.function(1);
+    // Call the topology initialization
+    selected_topology.init();
 
 
     // Destroy messages queue of shutdown, execute and scheduler
@@ -89,16 +94,19 @@ int main(int argc, char **argv){
 
 }
 
-int create_hypercube_topology(int msqid_nodes){
+int init_hypercube_topology(){
     printf("\ncreate hypercube here\n");
+    return 0;
 }
 
-int create_torus_topology(int msqid_nodes){
+int init_torus_topology(){
     printf("\ncreate torus here\n");
+    return 0;
 }
 
-int create_fat_tree_topology(int msqid_nodes){
+int init_fat_tree_topology(){
     printf("\ncreate fat tree here\n");
+    return 0;
 }
 
 int initialize_msq_top_level(){
