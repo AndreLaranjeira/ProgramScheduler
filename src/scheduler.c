@@ -14,75 +14,113 @@
 #include "../include/console.h"
 #include "../include/data_structures.h"
 
+// Macros
+#define CONTEXT "Scheduler"
+
+
+// Functions declaration
+int initialize_msq_top_level();
+int initialize_msq_nodes();
+void destroy_msq_top_level(int msqid_top_level);
+void destroy_msq_nodes(int msqid_nodes);
+
 // Main function:
 int main(int argc, char **argv){
 
     // Variables declaration
-    const char context[] = "Scheduler";
     const char arg_1_topologies[] = "hypercube, torus, fat_tree";
     char *selected_topology;
     int msqid_top_level, msqid_nodes;
 
     // Arguments number handling:
     if(argc != 2){
-        error(context,
+        error(CONTEXT,
                 "Wrong arguments number. \nUsage: ./scheduler <topologia>\n");
         exit(1);
     }
 
     // Topology argument handling:
-    if(strstr(arg_1_topologies, argv[1]) == NULL){
-        error(context,
+    if(strstr(arg_1_topologies, argv[1]) == NULL || strchr(argv[1], ',') != NULL){
+        error(CONTEXT,
                 "Wrong topology argument. \nPlease choose between %s\n", arg_1_topologies);
 
         exit(2);
     }else{
         selected_topology = argv[1];
-        success(context,
+        success(CONTEXT,
                 "...Starting scheduler with %s topology\n", selected_topology);
     }
 
     // Create messages queue for shutdown, execute and scheduler to communicate
-    if( (msqid_top_level = msgget(QUEUE_TOP_LEVEL, IPC_CREAT|0x1FF)) != -1 ){
-        info(context,
-                "Messages queue for shutdown, execute and scheduler created with success!\n");
-    }else{
-        warning(context,
-             "An error occur trying to create a messages queue for shutdown, execute and scheduler !\n");
-    }
+    msqid_top_level = initialize_msq_top_level();
 
     // Create messages queue for nodes and scheduler to communicate
-    if( (msqid_nodes = msgget(QUEUE_NODES, IPC_CREAT|0x1FF)) != -1 ){
-        info(context,
-             "Messages queue for nodes and scheduler created with success!\n");
-    }else{
-        warning(context,
-                "An error occur trying to create a messages queue for nodes and scheduler !\n");
-    }
+    msqid_nodes = initialize_msq_nodes();
 
 
     // TODO - neste ponto a fila esta criada use-a com sabedoria!
 
 
     // Destroy messages queue of shutdown, execute and scheduler
-    if(msgctl(msqid_top_level, IPC_RMID, NULL) != -1){
-        info(context,
-             "Messages queue for shutdown, execute and scheduler destroyed with success!\n");
-    }else{
-        warning(context,
-                "An error occur trying to destroy a messages queue for shutdown, execute and scheduler !\n");
-    }
+    destroy_msq_top_level(msqid_top_level);
 
     // Destroy messages queue of nodes and scheduler
-    if(msgctl(msqid_nodes, IPC_RMID, NULL) != -1){
-        info(context,
-             "Messages queue for nodes and scheduler destroyed with success!\n");
-    }else{
-        warning(context,
-                "An error occur trying to destroy a messages queue for nodes and scheduler !\n");
-    }
+    destroy_msq_nodes(msqid_nodes);
 
 
     return 0;
 
+}
+
+
+int initialize_msq_top_level(){
+    int msqid_top_level;
+
+    if( (msqid_top_level = msgget(QUEUE_TOP_LEVEL, IPC_CREAT|0x1FF)) != -1 ){
+        info(CONTEXT,
+             "Messages queue for shutdown, execute and scheduler created with success!\n");
+    }else{
+        warning(CONTEXT,
+                "An error occur trying to create a messages queue for shutdown, execute and scheduler !\n");
+        exit(3);
+    }
+
+    return  msqid_top_level;
+}
+
+int initialize_msq_nodes(){
+    int msqid_nodes;
+
+    if( (msqid_nodes = msgget(QUEUE_NODES, IPC_CREAT|0x1FF)) != -1 ){
+        info(CONTEXT,
+             "Messages queue for nodes and scheduler created with success!\n");
+    }else{
+        warning(CONTEXT,
+                "An error occur trying to create a messages queue for nodes and scheduler !\n");
+        exit(4);
+    }
+
+    return msqid_nodes;
+}
+
+void destroy_msq_top_level(int msqid_top_level){
+    if(msgctl(msqid_top_level, IPC_RMID, NULL) != -1){
+        info(CONTEXT,
+             "Messages queue for shutdown, execute and scheduler destroyed with success!\n");
+    }else{
+        warning(CONTEXT,
+                "An error occur trying to destroy a messages queue for shutdown, execute and scheduler !\n");
+        exit(5);
+    }
+}
+
+void destroy_msq_nodes(int msqid_nodes){
+    if(msgctl(msqid_nodes, IPC_RMID, NULL) != -1){
+        info(CONTEXT,
+             "Messages queue for nodes and scheduler destroyed with success!\n");
+    }else{
+        warning(CONTEXT,
+                "An error occur trying to destroy a messages queue for nodes and scheduler !\n");
+        exit(6);
+    }
 }
