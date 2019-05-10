@@ -1,16 +1,17 @@
 // Program scheduler - Execution process.
 
-// Compiler includes
+// Compiler includes:
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
 #include <unistd.h>
 
-// Project includes
+// Project includes:
 #include "console.h"
 #include "data_structures.h"
 
+// Macros:
 #define CONTEXT "Execute"
 
 // Main function:
@@ -29,14 +30,14 @@ int main(int argc, char **argv){
 
   if(access(argv[1], X_OK) < 0){
       error(CONTEXT,
-              "The file %s does not exist or you don't have needed permissions\n", argv[1]);
+              "The file %s does not exist or you don't have needed permissions!\n", argv[1]);
       exit(1);
   }
 
   delay = strtoul(argv[argc - 1], &err_check, 0);         // Delay is always the last argument.
   if(argv[argc-1] == err_check || argv[argc-1][0] == '-'){
       error(CONTEXT,
-              "Unable to decode delay value\n");
+              "Unable to decode delay value!\n");
       exit(1);
   }
 

@@ -1,13 +1,14 @@
 // Program scheduler - Shutdown process.
 
-// Compiler includes
+// Compiler includes:
 #include <stdio.h>
 #include <stdlib.h>
 
-// Project includes
+// Project includes:
 #include "console.h"
 #include "data_structures.h"
 
+// Macros:
 #define CONTEXT "Shutdown"
 
 int main(void){
