@@ -1,24 +1,26 @@
 // Program scheduler - Shutdown process.
 
-// Includes:
+// Compiler includes:
 #include <stdio.h>
 #include <stdlib.h>
 
-// User includes:
-#include "../include/console.h"
-#include "../include/data_structures.h"
+// Project includes:
+#include "console.h"
+#include "data_structures.h"
+
+// Macros:
+#define CONTEXT "Shutdown"
 
 int main(void){
 
   // Variable declaration:
-  char context[] = "Shutdown";
 
-  message(context,
+  message(CONTEXT,
           "Program scheduler shutting down...\n");
 
   //TODO: Do all stuff
 
-  success(context,
+  success(CONTEXT,
           "Program scheduler shutdown is complete!\n");
 
   return 0;

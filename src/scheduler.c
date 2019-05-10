@@ -1,6 +1,6 @@
 // Program scheduler - scheduler process.
 
-// Includes:
+// Compiler includes:
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -10,9 +10,9 @@
 #include <sys/ipc.h>
 #include <sys/msg.h>
 
-// User includes:
-#include "../include/console.h"
-#include "../include/data_structures.h"
+// Project includes:
+#include "console.h"
+#include "data_structures.h"
 
 // Macros:
 #define CONTEXT "Scheduler"
