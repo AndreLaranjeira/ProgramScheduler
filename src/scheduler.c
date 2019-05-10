@@ -14,11 +14,10 @@
 #include "../include/console.h"
 #include "../include/data_structures.h"
 
-// Macros
+// Macros:
 #define CONTEXT "Scheduler"
 
-
-// Functions declaration
+// Function headers:
 int initialize_msq_top_level();
 int initialize_msq_nodes();
 void destroy_msq_top_level(int msqid_top_level);
@@ -26,7 +25,7 @@ void destroy_msq_nodes(int msqid_nodes);
 
 int init_hypercube_topology();
 int init_torus_topology();
-int init_fat_tree_topology();
+int init_tree_topology();
 
 typedef struct topology_name_function{
     char* name;
@@ -40,9 +39,9 @@ int main(int argc, char **argv){
     int msqid_top_level, msqid_nodes;
     topology topology_options[] = {{"hypercube", &init_hypercube_topology},
                                    {"torus", &init_torus_topology},
-                                   {"tree", &init_fat_tree_topology}};
+                                   {"tree", &init_tree_topology}};
     topology selected_topology = {"", NULL};
-    char previews_topologies[80] = "";
+    char previous_topologies[80] = "";
 
     // Arguments number handling:
     if(argc != 2){
@@ -53,8 +52,8 @@ int main(int argc, char **argv){
 
     // Topology argument handling:
     for(int i=0; i < (sizeof(topology_options)/sizeof(topology)); i++){
-        strcat(previews_topologies, topology_options[i].name);
-        strcat(previews_topologies, "\n");
+        strcat(previous_topologies, topology_options[i].name);
+        strcat(previous_topologies, "\n");
 
         if(strcmp(topology_options[i].name, argv[1]) == 0){
             selected_topology = topology_options[i];
@@ -66,7 +65,7 @@ int main(int argc, char **argv){
         success(CONTEXT,
                 "Starting scheduler with %s topology...\n", selected_topology.name);
     }else{
-        error(CONTEXT, "Wrong topology argument. Choose one of that topologies: \n%s", previews_topologies);
+        error(CONTEXT, "Wrong topology argument. Choose one of that topologies: \n%s", previous_topologies);
         exit(2);
     }
 
@@ -94,6 +93,7 @@ int main(int argc, char **argv){
 
 }
 
+// Function implementations:
 int init_hypercube_topology(){
     printf("\ncreate hypercube here\n");
     return 0;
@@ -104,7 +104,7 @@ int init_torus_topology(){
     return 0;
 }
 
-int init_fat_tree_topology(){
+int init_tree_topology(){
     printf("\ncreate fat tree here\n");
     return 0;
 }
