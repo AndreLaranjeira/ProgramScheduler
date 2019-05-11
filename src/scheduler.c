@@ -47,7 +47,7 @@ int main(int argc, char **argv){
     if(argc != 2){
         error(CONTEXT,
                 "Wrong arguments number. \nUsage: ./scheduler <topologia>\n");
-        exit(1);
+        exit(COUNT_ARGS);
     }
 
     // Topology argument handling:
@@ -66,7 +66,7 @@ int main(int argc, char **argv){
                 "Starting scheduler with %s topology...\n", selected_topology.name);
     }else{
         error(CONTEXT, "Wrong topology argument. Choose one of that topologies: \n%s", previous_topologies);
-        exit(2);
+        exit(INVALID_ARG);
     }
 
     // Create messages queue for shutdown, execute and scheduler to communicate
@@ -118,7 +118,7 @@ int initialize_msq_top_level(){
     }else{
         error(CONTEXT,
                 "An error occur trying to create a messages queue for shutdown, execute and scheduler !\n");
-        exit(3);
+        exit(IPC_MSG_QUEUE_CREAT);
     }
 
     return  msqid_top_level;
@@ -133,7 +133,7 @@ int initialize_msq_nodes(){
     }else{
         error(CONTEXT,
                 "An error occur trying to create a messages queue for nodes and scheduler !\n");
-        exit(4);
+        exit(IPC_MSG_QUEUE_CREAT);
     }
 
     return msqid_nodes;
@@ -146,7 +146,7 @@ void destroy_msq_top_level(int msqid_top_level){
     }else{
         error(CONTEXT,
                 "An error occur trying to destroy a messages queue for shutdown, execute and scheduler !\n");
-        exit(5);
+        exit(IPC_MSG_QUEUE_RMID);
     }
 }
 
@@ -157,6 +157,6 @@ void destroy_msq_nodes(int msqid_nodes){
     }else{
         error(CONTEXT,
                 "An error occur trying to destroy a messages queue for nodes and scheduler !\n");
-        exit(6);
+        exit(IPC_MSG_QUEUE_RMID);
     }
 }
