@@ -16,6 +16,19 @@
 #define QUEUE_ID_SHUTDOWN (17)
 #define QUEUE_ID_SCHEDULER (18)
 
+// Standardization of all error codes
+// As the project increments, please add the new error codes to
+typedef enum errors{
+    COUNT_ARGS = 1,
+    INVALID_ARG,
+    FILE_ERROR,
+    IPC_MSG_QUEUE_CREAT,
+    IPC_MSG_QUEUE_SEND,
+    IPC_MSG_QUEUE_RECEIVE,
+    IPC_MSG_QUEUE_RMID,
+    UNKNOWN_ERROR
+}error_codes;
+
 // Renaming time measure struct type
 typedef struct tm time_measure;
 
