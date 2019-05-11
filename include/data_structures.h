@@ -4,6 +4,8 @@
 #include <stdint.h>
 #include <time.h>
 
+// Macros:
+
 // Define queue IDs
 #define QUEUE_TOP_LEVEL (0x8166)
 #define QUEUE_NODES (0x2458)
@@ -16,6 +18,10 @@
 #define QUEUE_ID_SHUTDOWN (17)
 #define QUEUE_ID_SCHEDULER (18)
 
+// Fixed argument number and length for the msg_data_program data type:
+#define DATA_PROGRAM_MAX_ARG_NUM 10
+#define DATA_PROGRAM_MAX_ARG_LEN 100
+
 // Renaming time measure struct type
 typedef struct tm time_measure;
 
@@ -24,8 +30,7 @@ typedef struct message_data_program {
   int32_t job; //-1 for exec -> scheduler communication
   unsigned long delay; //Time in seconds to delay. Nodes ignore this
   int argc;
-  char **argv; // Testar se passar o argv original funciona
-  //char argv[20][26]; // Se der merda use esse (até 20 argumentos de 25 letras + \0)
+  char argv[DATA_PROGRAM_MAX_ARG_NUM][DATA_PROGRAM_MAX_ARG_LEN];
 } msg_data_program;
 
 // Data collected from each node for computing metrics
