@@ -54,7 +54,7 @@ int main(int argc, char **argv){
   if(msqid < 0) {
     error(CONTEXT,
           "Scheduler is not currently running! Please start the scheduler.\n");
-    exit(4);
+    exit(IPC_MSG_QUEUE_CREAT);
   }
 
   // Write the message adequately:
@@ -73,7 +73,7 @@ int main(int argc, char **argv){
   if(msgsnd(msqid, &execute_msg, sizeof(execute_msg.data), 0) == -1) {
     error(CONTEXT,
           "The message could not be sent! Please check your message queues.\n");
-    exit(5);
+    exit(IPC_MSG_QUEUE_SEND);
   }
 
   // Notify the user:
