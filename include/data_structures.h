@@ -4,6 +4,8 @@
 #include <stdint.h>
 #include <time.h>
 
+// Macros:
+
 // Define queue IDs
 #define QUEUE_TOP_LEVEL (0x8166)
 #define QUEUE_NODES (0x2458)
@@ -16,8 +18,12 @@
 #define QUEUE_ID_SHUTDOWN (17)
 #define QUEUE_ID_SCHEDULER (18)
 
-// Standardization of all error codes
-// As the project increments, please add the new error codes to
+// Fixed argument number and length for the msg_data_program data type:
+#define DATA_PROGRAM_MAX_ARG_NUM 10
+#define DATA_PROGRAM_MAX_ARG_LEN 100
+
+// Standardization of all error codes.
+// As the project increments, please add the new error codes here.
 typedef enum errors{
     COUNT_ARGS = 1,
     INVALID_ARG,
@@ -26,6 +32,7 @@ typedef enum errors{
     IPC_MSG_QUEUE_SEND,
     IPC_MSG_QUEUE_RECEIVE,
     IPC_MSG_QUEUE_RMID,
+    SCHEDULER_DOWN,
     UNKNOWN_ERROR
 }error_codes;
 
@@ -37,8 +44,7 @@ typedef struct message_data_program {
   int32_t job; //-1 for exec -> scheduler communication
   unsigned long delay; //Time in seconds to delay. Nodes ignore this
   int argc;
-  char **argv; // Testar se passar o argv original funciona
-  //char argv[20][26]; // Se der merda use esse (até 20 argumentos de 25 letras + \0)
+  char argv[DATA_PROGRAM_MAX_ARG_NUM][DATA_PROGRAM_MAX_ARG_LEN];
 } msg_data_program;
 
 // Data collected from each node for computing metrics
