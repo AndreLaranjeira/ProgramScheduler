@@ -54,7 +54,7 @@ int main(int argc, char **argv){
   if(msqid < 0) {
     error(CONTEXT,
           "Scheduler is not currently running! Please start the scheduler.\n");
-    exit(IPC_MSG_QUEUE_CREAT);
+    exit(SCHEDULER_DOWN);
   }
 
   // Write the message adequately:

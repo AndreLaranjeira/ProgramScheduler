@@ -32,6 +32,7 @@ typedef enum errors{
     IPC_MSG_QUEUE_SEND,
     IPC_MSG_QUEUE_RECEIVE,
     IPC_MSG_QUEUE_RMID,
+    SCHEDULER_DOWN,
     UNKNOWN_ERROR
 }error_codes;
 
