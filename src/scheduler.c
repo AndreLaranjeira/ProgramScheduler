@@ -76,10 +76,10 @@ int main(int argc, char **argv){
     }
 
     // Create messages queue for shutdown, execute and scheduler to communicate
-//    msqid_top_level = initialize_msq_top_level();
-//
-//    // Create messages queue for nodes and scheduler to communicate
-//    msqid_nodes = initialize_msq_nodes();
+    msqid_top_level = initialize_msq_top_level();
+
+    // Create messages queue for nodes and scheduler to communicate
+    msqid_nodes = initialize_msq_nodes();
 
 
     // TODO - neste ponto a fila esta criada use-a com sabedoria!
@@ -89,12 +89,12 @@ int main(int argc, char **argv){
 
     wait(&status);
 
-//
-//    // Destroy messages queue of shutdown, execute and scheduler
-//    destroy_msq_top_level(msqid_top_level);
-//
-//    // Destroy messages queue of nodes and scheduler
-//    destroy_msq_nodes(msqid_nodes);
+
+    // Destroy messages queue of shutdown, execute and scheduler
+    destroy_msq_top_level(msqid_top_level);
+
+    // Destroy messages queue of nodes and scheduler
+    destroy_msq_nodes(msqid_nodes);
 
 
     return 0;
@@ -110,7 +110,7 @@ void fork_nodes(char *const nodes[16][6], int n_nodes, int *pids){
     int pid = fork();
 
     if(pid == 0){
-        execvp("./shutdown", nodes[n_nodes-1]);
+        execvp("./node", nodes[n_nodes-1]);
     }else{
         pids[n_nodes-1] = pid;
         fork_nodes(nodes, n_nodes-1, pids);
