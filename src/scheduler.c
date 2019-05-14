@@ -26,19 +26,19 @@ int initialize_msq_nodes();
 void destroy_msq_top_level(int msqid_top_level);
 void destroy_msq_nodes(int msqid_nodes);
 
-int* init_hypercube_topology();
-int* init_torus_topology();
-int* init_tree_topology();
+int init_hypercube_topology(int pids[16]);
+int init_torus_topology(int pids[16]);
+int init_tree_topology(int pids[16]);
 
 typedef struct topology_name_function{
     char* name;
-    int* (*init)();
+    int (*init)(int [16]);
 }topology;
 
 // Main function:
 int main(int argc, char **argv){
 
-    int* pids;
+    int pids[16];
     int status;
 
     // Variables declaration
@@ -85,7 +85,7 @@ int main(int argc, char **argv){
     // TODO - neste ponto a fila esta criada use-a com sabedoria!
 
     // Call the topology initialization
-    pids = selected_topology.init();
+    selected_topology.init(pids);
 
     wait(&status);
 
@@ -101,26 +101,23 @@ int main(int argc, char **argv){
 
 }
 
-void fork_nodes(char *const nodes[16][6], int n_nodes, int *pids){
+void fork_nodes(char *const nodes[16][6], int n_nodes, int pids[16]){
+    int pid;
 
-    if(n_nodes == 0){
-        return;
-    }
+    for(int i=0; i<n_nodes; i++){
+        pid = fork();
 
-    int pid = fork();
-
-    if(pid == 0){
-        execvp("./node", nodes[n_nodes-1]);
-    }else{
-        pids[n_nodes-1] = pid;
-        fork_nodes(nodes, n_nodes-1, pids);
+        if(pid == 0){
+            execvp("./node", nodes[n_nodes-1]);
+        }else{
+            pids[n_nodes-1] = pid;
+        }
     }
 }
 
 // Function implementations:
-int* init_hypercube_topology(){
+int init_hypercube_topology(int pids[16]){
     int n_nodes = 16;
-    int *pids = malloc(16* sizeof(int));
     char *const topology[16][6] = {
             {"0", "1","2","4","8", END_PARAMS},
             {"1", "0","3","5","9", END_PARAMS},
@@ -147,12 +144,11 @@ int* init_hypercube_topology(){
     // Fork all the nodes
     fork_nodes(topology, n_nodes, pids);
 
-    return pids;
+    return 0;
 }
 
-int* init_torus_topology(){
+int init_torus_topology(int pids[16]){
     int n_nodes = 16;
-    int *pids = malloc(16* sizeof(int));
     char *const topology[16][6] = {
             {"0", "1","3","4","12", END_PARAMS},
             {"1", "0","2","5","13", END_PARAMS},
@@ -179,12 +175,11 @@ int* init_torus_topology(){
     // Fork all the nodes
     fork_nodes(topology, n_nodes, pids);
 
-    return pids;
+    return 0;
 }
 
-int* init_tree_topology(){
+int init_tree_topology(int pids[16]){
     int n_nodes = 15;
-    int *pids = malloc(16* sizeof(int));
     char *const topology[16][6] = {
             {"0", "1","2","","", END_PARAMS},
             {"1", "0","3","4","", END_PARAMS},
@@ -210,7 +205,7 @@ int* init_tree_topology(){
     // Fork all the nodes
     fork_nodes(topology, n_nodes, pids);
 
-    return pids;
+    return 0;
 }
 
 int initialize_msq_top_level(){
