@@ -2,6 +2,7 @@
 #define DATA_STRUCTURES_H_
 
 #include <stdint.h>
+#include <sys/types.h>
 #include <time.h>
 
 // Macros:
@@ -60,12 +61,19 @@ typedef struct message_data_control {
   int a; // Pra num dar erro
 } msg_data_control;
 
+// Data informing a process PID:
+typedef struct message_data_pid {
+  long sender_id;   // Identify who sent the message.
+  pid_t pid;        // PID from the sender.
+} msg_data_pid;
+
 // Enumerate types of messages
 typedef enum message_kind {
   KIND_ERROR,
   KIND_PROGRAM,
   KIND_METRICS,
-  KIND_CONTROL
+  KIND_CONTROL,
+  KIND_PID
 }msg_kind;
 
 // Define general message data structure
@@ -76,6 +84,7 @@ typedef struct message_data {
     msg_data_program data_prog; // For queueing and starting programs and
     msg_data_metrics data_metrics; // For sending metrics from the nodes to the scheduler
     msg_data_control data_control; // For sending shutdowns and other signals needed
+    msg_data_pid data_pid; // For sending a process' PID to another process.
   } msg_body;
 } msg_data;
 
