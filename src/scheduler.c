@@ -87,8 +87,9 @@ int main(int argc, char **argv){
     // Call the topology initialization
     selected_topology.init(pids);
 
-    wait(&status);
+    sleep(10000);
 
+    // TODO- don't forget: wait for the sons processes kkk
 
     // Destroy messages queue of shutdown, execute and scheduler
     destroy_msq_top_level(msqid_top_level);
@@ -108,9 +109,9 @@ void fork_nodes(char *const nodes[16][6], int n_nodes, int pids[16]){
         pid = fork();
 
         if(pid == 0){
-            execvp("./node", nodes[n_nodes-1]);
+            execvp("./node", nodes[i]);
         }else{
-            pids[n_nodes-1] = pid;
+            pids[i] = pid;
         }
     }
 }
