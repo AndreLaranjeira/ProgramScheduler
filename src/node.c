@@ -109,8 +109,9 @@ boolean handle_program(msg *request){                                       // H
             time(&rawtime);
             metrics.data.msg_body.data_metrics.end_time = localtime(&rawtime);                  // Captures the finish time
             metrics.data.msg_body.data_metrics.return_code = ret_state;                         // Stores the return code
-            metrics.recipient = adjacent_nodes[1];                                              // Send the metrics to lower neighbor
-            msgsnd(msq_id, &metrics, sizeof(msg), 0666);
+
+            metrics.recipient = adjacent_nodes[1];                                              // Send the message to the lower node
+            msgsnd(msq_id, &metrics, sizeof(msg), 0666);                                        // Here I'm assuming that the scheduler ID is always lower than any node
 
         }
         else {
@@ -125,10 +126,9 @@ boolean handle_program(msg *request){                                       // H
 }
 
 boolean handle_metrics(msg *request){
-    if(request->data.msg_body.data_metrics.job >= last_init_job){
-        for(int i = 1; i <= adjacent_nodes[0]; i++){
-
-        }
+    if(request->data.msg_body.data_metrics.job >= last_init_job){           // last_init_job variable is updated at handle_program function
+        request->recipient = adjacent_nodes[1];                             // Gets the lower neighbor ID
+        msgsnd(msq_id, &request, sizeof(msg), 0666);                        // Here I'm assuming that the scheduler ID is always lower than any node
     }
 }
 
