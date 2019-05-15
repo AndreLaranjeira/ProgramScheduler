@@ -20,8 +20,9 @@ typedef enum tf{false, true} boolean;
 
 // Standardization of all error codes
 // As the project increments, please add the new error codes to
-typedef enum errors{
-    COUNT_ARGS = 1,
+typedef enum returns{
+    SUCCESS,
+    COUNT_ARGS,
     INVALID_ARG,
     FILE_ERROR,
     IPC_MSG_QUEUE_CREAT,
@@ -31,7 +32,7 @@ typedef enum errors{
     SCHEDULER_DOWN,
     FORK_ERROR,
     UNKNOWN_ERROR
-}error_codes;
+}return_codes;
 
 typedef enum commands{
     EXIT_EXECUTION = 1

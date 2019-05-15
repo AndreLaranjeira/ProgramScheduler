@@ -15,7 +15,7 @@ int last_init_job = 0;      // Holds the last run job ID
 int main(int argc, char **argv){
 
     char *error_check;                                                     // Pointer used to detect char to int conversion errors
-    boolean proceed = true;                                                // Boolean to hold the stop condition
+    int proceed = true;                                                    // Int to hold the stop condition and will return program stop condition
     msg queue_listening;                                                   // Message variable to receive messages from queue
 
     if(argc < 2 || argc > 7){                                              // Argument amount check
@@ -25,6 +25,7 @@ int main(int argc, char **argv){
     }
 
     msq_id = msgget(QUEUE_NODES, 0666);                                    // Getting the scheduler IPC message queue
+
     if(msq_id < 0){
         error(CONTEXT,
                 "Scheduler is not running. Stopping...\n");
@@ -73,7 +74,7 @@ int main(int argc, char **argv){
 
     free(adjacent_nodes);                                                   // Liberates the array memory
 
-    return 0;
+    return proceed;
 
 }
 
@@ -81,12 +82,12 @@ void instance_context(char *string, int id){                                // P
     sprintf(string, "Node %d", id);
 }
 
-boolean handle_program(msg *request){                                       // Handles a request to execute something
+int handle_program(msg *request){                                       // Handles a request to execute something
     int ret_state;                                                          // Variable to wait child process (return value)
     int pid;                                                                // PID of child process
     msg metrics;                                                            // Message to hold the running process statistics
     time_t rawtime;                                                         // Variable to grab current CPU time
-    boolean answer = true;                                                  // Control variable to continue the execution
+    int answer = true;                                                  // Control variable to continue the execution
 
     if(request->data.msg_body.data_prog.job > last_init_job){               // Eliminating duplicates by executing just higher job IDs
         for(int i = 1; i <= adjacent_nodes[0]; i++){                        // Broadcast execution message to neighbors
@@ -118,25 +119,25 @@ boolean handle_program(msg *request){                                       // H
             instance_context(context, node_id);                                                 // Fork process error
             error(context,
                     "Could not fork a new process. Shutting down...\n");
-            answer = false;
+            answer = FORK_ERROR;
         }
     }
 
     return answer;
 }
 
-boolean handle_metrics(msg *request){
+int handle_metrics(msg *request){
     if(request->data.msg_body.data_metrics.job >= last_init_job){           // last_init_job variable is updated at handle_program function
         request->recipient = adjacent_nodes[1];                             // Gets the lower neighbor ID
         msgsnd(msq_id, &request, sizeof(msg), 0666);                        // Here I'm assuming that the scheduler ID is always lower than any node
     }
 }
 
-boolean handle_commands(msg *request){                                      // Decodes a command message
-    boolean answer = true;                                                  // In the beginning, we expect to continue execution
+int handle_commands(msg *request){                                      // Decodes a command message
+    int answer = true;                                                  // In the beginning, we expect to continue execution
     switch(request->data.msg_body.data_control.command_code){               // Switch between commands
         case EXIT_EXECUTION:                                                // Exit command = set return to false. (Break the outer loop in calling function)
-            answer = false;
+            answer = SUCCESS;
             break;
         default:                                                            // Unknown command code, just ignore the message
             instance_context(context, node_id);
