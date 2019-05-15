@@ -80,7 +80,7 @@ void instance_context(char *string, int id){
     sprintf(string, "Node %d", id);
 }
 
-boolean handle_program(msg *request, int *adj_nodes){
+boolean handle_program(msg *request){
     int ret_state;
     int pid;
     msg metrics;
@@ -88,8 +88,8 @@ boolean handle_program(msg *request, int *adj_nodes){
     boolean answer = true;
 
     if(request->data.msg_body.data_prog.job > last_init_job){
-        for(int i = 1; i <= adj_nodes[0]; i++){
-            request->recipient = adj_nodes[i];
+        for(int i = 1; i <= adjacent_nodes[0]; i++){
+            request->recipient = adjacent_nodes[i];
             msgsnd(msq_id, request, sizeof(msg), 0666);
         }
 
@@ -108,7 +108,7 @@ boolean handle_program(msg *request, int *adj_nodes){
             time(&rawtime);
             metrics.data.msg_body.data_metrics.end_time = localtime(&rawtime);
             metrics.data.msg_body.data_metrics.return_code = ret_state;
-            metrics.recipient = adj_nodes[1];
+            metrics.recipient = adjacent_nodes[1];
             msgsnd(msq_id, &metrics, sizeof(msg), 0666);
 
         }
@@ -123,15 +123,15 @@ boolean handle_program(msg *request, int *adj_nodes){
     return answer;
 }
 
-boolean handle_metrics(msg *request, int *adj_nodes){
+boolean handle_metrics(msg *request){
     if(request->data.msg_body.data_metrics.job >= last_init_job){
-        for(int i = 1; i <= adj_nodes[0]; i++){
+        for(int i = 1; i <= adjacent_nodes[0]; i++){
 
         }
     }
 }
 
-boolean handle_commands(msg *request, int *adj_nodes){  /* TODO: parametro adj_nodes está aqui para possiveis expansões, caso não vá usar de fato, retire-o */
+boolean handle_commands(msg *request){
     boolean answer = true;
     switch(request->data.msg_body.data_control.command_code){
         case EXIT_EXECUTION:

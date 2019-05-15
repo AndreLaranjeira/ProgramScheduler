@@ -12,9 +12,9 @@
 #include "data_structures.h"
 
 void instance_context(char *string, int id);
-boolean handle_program(msg *request, int *adj_nodes);
-boolean handle_metrics(msg *request, int *adj_nodes);
-boolean handle_commands(msg *request, int *adj_nodes);
+boolean handle_program(msg *request);
+boolean handle_metrics(msg *request);
+boolean handle_commands(msg *request);
 
 
 
