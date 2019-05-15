@@ -17,47 +17,51 @@
 
 int main(){
 
-  // Variable declaration:
-  key_t msqid;
-  msg received_msg;
-  pid_t scheduler_PID;
 
-  // Acquire the message queue id:
-  msqid = msgget(QUEUE_TOP_LEVEL, 0x1FF);
+    // Variable declaration:
+    key_t msqid;
+    msg received_msg;
+    pid_t scheduler_PID;
 
-  if(msqid < 0) {
-    error(CONTEXT,
-          "Scheduler is not currently running! Nothing to be done!\n");
-    exit(SCHEDULER_DOWN);
-  }
+    // Acquire the message queue id:
+    msqid = msgget(QUEUE_TOP_LEVEL, 0x1FF);
 
-  // Acquire a message from the message queue (it should be the scheduler PID):
-  if(msgrcv(msqid, &received_msg, sizeof(received_msg.data), QUEUE_ID_SHUTDOWN,
+    if(msqid < 0) {
+        error(CONTEXT,
+                "Scheduler is not currently running! Nothing to be done!\n");
+        exit(SCHEDULER_DOWN);
+    }
+
+    // Acquire a message from the message queue (it should be the scheduler PID):
+    if(msgrcv(msqid, &received_msg, sizeof(received_msg.data), QUEUE_ID_SHUTDOWN,
             IPC_NOWAIT) == -1) {
 
     // If there are no messages left, there was a problem!
     error(CONTEXT,
-          "Did not receive scheduler process ID! Please try again.\n");
+            "Did not receive scheduler process ID! Please try again.\n");
     exit(IPC_MSG_QUEUE_RECEIVE);
 
-  }
-
-  // If it is a pid message from the scheduler, send the SIGTERM signal:
-  if(received_msg.data.type == KIND_PID) {
-    if(received_msg.data.msg_body.data_pid.sender_id == QUEUE_ID_SCHEDULER) {
-      scheduler_PID = received_msg.data.msg_body.data_pid.pid;
-      kill(scheduler_PID, SIGTERM);
-      success(CONTEXT, "Shutdown signal sent!\n");
     }
-  }
 
-  // Else, we have a problem!
-  else {
-    error(CONTEXT,
-          "Did not receive scheduler process ID! Please try again.\n");
-    exit(IPC_MSG_QUEUE_RECEIVE);
-  }
+    // If it is a pid message from the scheduler, send the SIGTERM signal:
+    if(received_msg.data.type == KIND_PID) {
+        if(received_msg.data.msg_body.data_pid.sender_id == QUEUE_ID_SCHEDULER) {
+            scheduler_PID = received_msg.data.msg_body.data_pid.pid;
+            kill(scheduler_PID, SIGINT);
+            success(CONTEXT, "Shutdown signal sent!\n");
+        }
+        else {
+          error(CONTEXT,
+                  "Did not receive scheduler process ID! Please try again.\n");
+          exit(IPC_MSG_QUEUE_RECEIVE);
+        }
+    }
+    else {
+        error(CONTEXT,
+                "Did not receive scheduler process ID! Please try again.\n");
+        exit(IPC_MSG_QUEUE_RECEIVE);
+    }
 
-  return(0);
+    return 0;
 
 }

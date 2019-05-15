@@ -50,8 +50,7 @@ int main(int argc, char **argv){
     char previous_topologies[80] = "";
 
     // Signal assignment:
-    signal(SIGINT, shutdown);       // Optional. Allows CTRL-C to shutdown!
-    signal(SIGTERM, shutdown);
+    signal(SIGINT, shutdown);       // Allows CTRL-C to shutdown!
 
     // Arguments number handling:
     if(argc != 2){
@@ -186,5 +185,5 @@ void destroy_msq_nodes(int msqid_nodes){
 }
 
 void shutdown() {
-  info(CONTEXT, "Shutdown signal received! Shutting down scheduler...\n");
+    info(CONTEXT, "Shutdown signal received! Shutting down scheduler...\n");
 }
