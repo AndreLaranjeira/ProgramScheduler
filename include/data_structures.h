@@ -14,7 +14,7 @@
 #define QUEUE_ID_NODE(id) (id)
 #define QUEUE_ID_EXEC (16)
 #define QUEUE_ID_SHUTDOWN (17)
-#define QUEUE_ID_SCHEDULER (18)
+#define QUEUE_ID_SCHEDULER (-1)
 
 // Standardization of all error codes
 // As the project increments, please add the new error codes to

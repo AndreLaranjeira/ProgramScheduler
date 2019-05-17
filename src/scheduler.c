@@ -19,6 +19,8 @@
 // Macros:
 #define CONTEXT "Scheduler"
 #define END_PARAMS (char*) NULL
+#define N_MAX_PARAMS 7
+#define N_MAX_NODES 16
 
 // Function headers:
 int initialize_msq_top_level();
@@ -26,19 +28,19 @@ int initialize_msq_nodes();
 void destroy_msq_top_level(int msqid_top_level);
 void destroy_msq_nodes(int msqid_nodes);
 
-int init_hypercube_topology(int pids[16]);
-int init_torus_topology(int pids[16]);
-int init_tree_topology(int pids[16]);
+int init_hypercube_topology(int pids[N_MAX_NODES]);
+int init_torus_topology(int pids[N_MAX_NODES]);
+int init_tree_topology(int pids[N_MAX_NODES]);
 
 typedef struct topology_name_function{
     char* name;
-    int (*init)(int [16]);
+    int (*init)(int [N_MAX_NODES]);
 }topology;
 
 // Main function:
 int main(int argc, char **argv){
 
-    int pids[16];
+    int pids[N_MAX_NODES];
     int status;
 
     // Variables declaration
@@ -102,7 +104,7 @@ int main(int argc, char **argv){
 
 }
 
-void fork_nodes(char *const nodes[16][6], int n_nodes, int pids[16]){
+void fork_nodes(char *const nodes[N_MAX_NODES][N_MAX_PARAMS], int n_nodes, int pids[N_MAX_NODES]){
     int pid;
 
     for(int i=0; i<n_nodes; i++){
@@ -117,10 +119,10 @@ void fork_nodes(char *const nodes[16][6], int n_nodes, int pids[16]){
 }
 
 // Function implementations:
-int init_hypercube_topology(int pids[16]){
+int init_hypercube_topology(int pids[N_MAX_NODES]){
     int n_nodes = 16;
-    char *const topology[16][6] = {
-            {"0", "1","2","4","8", END_PARAMS},
+    char *const topology[N_MAX_NODES][N_MAX_PARAMS] = {
+            {"0", "-1", "1","2","4","8", END_PARAMS},
             {"1", "0","3","5","9", END_PARAMS},
             {"2", "0","3","6","10", END_PARAMS},
             {"3", "1","2","7","11", END_PARAMS},
@@ -148,10 +150,10 @@ int init_hypercube_topology(int pids[16]){
     return 0;
 }
 
-int init_torus_topology(int pids[16]){
+int init_torus_topology(int pids[N_MAX_NODES]){
     int n_nodes = 16;
-    char *const topology[16][6] = {
-            {"0", "1","3","4","12", END_PARAMS},
+    char *const topology[N_MAX_NODES][N_MAX_PARAMS] = {
+            {"0", "-1", "1","3","4","12", END_PARAMS},
             {"1", "0","2","5","13", END_PARAMS},
             {"2", "1","3","6","14", END_PARAMS},
             {"3", "0","2","7","15", END_PARAMS},
@@ -179,10 +181,10 @@ int init_torus_topology(int pids[16]){
     return 0;
 }
 
-int init_tree_topology(int pids[16]){
+int init_tree_topology(int pids[N_MAX_NODES]){
     int n_nodes = 15;
-    char *const topology[16][6] = {
-            {"0", "1","2","","", END_PARAMS},
+    char *const topology[N_MAX_NODES][N_MAX_PARAMS] = {
+            {"0", "-1", "1","2","","", END_PARAMS},
             {"1", "0","3","4","", END_PARAMS},
             {"2", "0","5","6","", END_PARAMS},
             {"3", "2","7","8","", END_PARAMS},
@@ -250,8 +252,8 @@ void destroy_msq_top_level(int msqid_top_level){
     }
 }
 
-void destroy_msq_nodes(int msqid_nodes){
-    if(msgctl(msqid_nodes, IPC_RMID, NULL) != -1){
+void destroy_msq_nodes(int msqSID_NODEs){
+    if(msgctl(msqSID_NODEs, IPC_RMID, NULL) != -1){
         info(CONTEXT,
              "Messages queue for nodes and scheduler destroyed with success!\n");
     }else{
