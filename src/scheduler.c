@@ -28,23 +28,29 @@ int initialize_msq_nodes();
 void destroy_msq_top_level(int msqid_top_level);
 void destroy_msq_nodes(int msqid_nodes);
 
-int init_hypercube_topology(int pids[N_MAX_NODES]);
-int init_torus_topology(int pids[N_MAX_NODES]);
-int init_tree_topology(int pids[N_MAX_NODES]);
+int init_hypercube_topology();
+int init_torus_topology();
+int init_tree_topology();
+
+void panic_function();
 
 typedef struct topology_name_function{
     char* name;
-    int (*init)(int [N_MAX_NODES]);
+    int (*init)();
 }topology;
+
+
+// Global Variables
+int nodes_pid[N_MAX_NODES];
+int msqid_top_level, msqid_nodes;
+
 
 // Main function:
 int main(int argc, char **argv){
 
-    int pids[N_MAX_NODES];
     int status;
 
     // Variables declaration
-    int msqid_top_level, msqid_nodes;
     topology topology_options[] = {{"hypercube", &init_hypercube_topology},
                                    {"torus", &init_torus_topology},
                                    {"tree", &init_tree_topology}};
@@ -77,21 +83,52 @@ int main(int argc, char **argv){
         exit(INVALID_ARG);
     }
 
+    // Set the abort function to creation of nodes
+    signal(SIGABRT, panic_function);
+
     // Create messages queue for shutdown, execute and scheduler to communicate
     msqid_top_level = initialize_msq_top_level();
 
     // Create messages queue for nodes and scheduler to communicate
     msqid_nodes = initialize_msq_nodes();
 
-
-    // TODO - neste ponto a fila esta criada use-a com sabedoria!
-
     // Call the topology initialization
-    selected_topology.init(pids);
+    selected_topology.init();
 
-    sleep(10000);
+    // TODO - implementar o shutdown e o wait, abaixo segue um placeholder
 
-    // TODO- don't forget: wait for the sons processes kkk
+    for(int i=0; i<N_MAX_NODES; i++){
+        if(nodes_pid[i] !=0){
+            wait(&status);
+        }
+    }
+
+    return 0;
+}
+
+
+/**
+ * If something goes wrong at creation of the nodes
+ * this function will kill all created nodes
+ * finalize the queues messages and exit
+ * */
+void panic_function(){
+
+    int count_killed_nodes = 0;
+    int status;
+
+    // Kill all created nodes
+    for(int i=0; i<N_MAX_NODES; i++){
+        if(nodes_pid[i] != 0){
+            kill(nodes_pid[i], SIGKILL);
+            count_killed_nodes++;
+        }
+    }
+
+    // wait for killed nodes
+    for(int i=0; i<count_killed_nodes; i++){
+        wait(&status);
+    }
 
     // Destroy messages queue of shutdown, execute and scheduler
     destroy_msq_top_level(msqid_top_level);
@@ -99,27 +136,40 @@ int main(int argc, char **argv){
     // Destroy messages queue of nodes and scheduler
     destroy_msq_nodes(msqid_nodes);
 
+    error(CONTEXT,
+            "something went wrong at creation of nodes, please check if 'node' program file are in the same"
+            "place of the scheduler program\n");
 
-    return 0;
-
+    exit(WENT_WRONG);
 }
 
-void fork_nodes(char *const nodes[N_MAX_NODES][N_MAX_PARAMS], int n_nodes, int pids[N_MAX_NODES]){
-    int pid;
+
+/**
+ * Create the 'nodes' process 'n_nodes' times
+ * and if something goes wrong at creation sends a SIGABRT
+ * to parent (scheduler) to kill all nodes created
+ * */
+void fork_nodes(char *const nodes[N_MAX_NODES][N_MAX_PARAMS], int n_nodes){
+
+    // Parent pid
+    int ppid = getpid();
+
+    // Initialize all the pids with 0
+    for(int i=0; i < N_MAX_NODES; i++) nodes_pid[i]=0;
 
     for(int i=0; i<n_nodes; i++){
-        pid = fork();
+        nodes_pid[i] = fork();
 
-        if(pid == 0){
-            execvp("./node", nodes[i]);
-        }else{
-            pids[i] = pid;
+        if(nodes_pid[i] == 0){
+            execvp("./1node", nodes[i]);
+            kill(ppid, SIGABRT);
+            exit(-1);
         }
     }
 }
 
 // Function implementations:
-int init_hypercube_topology(int pids[N_MAX_NODES]){
+int init_hypercube_topology(){
     int n_nodes = 16;
     char *const topology[N_MAX_NODES][N_MAX_PARAMS] = {
             {"0", "-1", "1","2","4","8", END_PARAMS},
@@ -141,16 +191,13 @@ int init_hypercube_topology(int pids[N_MAX_NODES]){
             //{id_node, neighbors, end of params}
     };
 
-    // Initialize all the pids with 0
-    for(int i=0; i<n_nodes; i++) pids[i] =0;
-
     // Fork all the nodes
-    fork_nodes(topology, n_nodes, pids);
+    fork_nodes(topology, n_nodes);
 
     return 0;
 }
 
-int init_torus_topology(int pids[N_MAX_NODES]){
+int init_torus_topology(){
     int n_nodes = 16;
     char *const topology[N_MAX_NODES][N_MAX_PARAMS] = {
             {"0", "-1", "1","3","4","12", END_PARAMS},
@@ -172,16 +219,13 @@ int init_torus_topology(int pids[N_MAX_NODES]){
             //{id_node, neighbors, end of params}
     };
 
-    // Initialize all the pids with 0
-    for(int i=0; i<n_nodes; i++) pids[i] =0;
-
     // Fork all the nodes
-    fork_nodes(topology, n_nodes, pids);
+    fork_nodes(topology, n_nodes);
 
     return 0;
 }
 
-int init_tree_topology(int pids[N_MAX_NODES]){
+int init_tree_topology(){
     int n_nodes = 15;
     char *const topology[N_MAX_NODES][N_MAX_PARAMS] = {
             {"0", "-1", "1","2","","", END_PARAMS},
@@ -202,11 +246,8 @@ int init_tree_topology(int pids[N_MAX_NODES]){
             //{id_node, neighbors, end of params}
     };
 
-    // Initialize all the pids with 0
-    for(int i=0; i<n_nodes; i++) pids[i] =0;
-
     // Fork all the nodes
-    fork_nodes(topology, n_nodes, pids);
+    fork_nodes(topology, n_nodes);
 
     return 0;
 }
@@ -252,8 +293,8 @@ void destroy_msq_top_level(int msqid_top_level){
     }
 }
 
-void destroy_msq_nodes(int msqSID_NODEs){
-    if(msgctl(msqSID_NODEs, IPC_RMID, NULL) != -1){
+void destroy_msq_nodes(int msqid_nodes){
+    if(msgctl(msqid_nodes, IPC_RMID, NULL) != -1){
         info(CONTEXT,
              "Messages queue for nodes and scheduler destroyed with success!\n");
     }else{
