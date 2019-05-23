@@ -39,7 +39,7 @@ typedef enum commands{
 }command_codes;
 
 // Renaming time measure struct type
-typedef struct tm * time_measure;
+typedef struct tm time_measure;
 
 // Data needed to start a program
 typedef struct message_data_program {

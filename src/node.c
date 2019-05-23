@@ -96,10 +96,10 @@ int handle_program(msg *request){                                       // Handl
         else if (pid > 0) {                                                                     // Father process will start holding new metrics
             metrics.data.msg_body.data_metrics.job = last_init_job;                             // ID of the running job
             time(&rawtime);                                                                     // Captures the start time
-            metrics.data.msg_body.data_metrics.start_time = localtime(&rawtime);
+            metrics.data.msg_body.data_metrics.start_time = *localtime(&rawtime);
             wait(&ret_state);                                                                   // Wait for child process to finish
             time(&rawtime);
-            metrics.data.msg_body.data_metrics.end_time = localtime(&rawtime);                  // Captures the finish time
+            metrics.data.msg_body.data_metrics.end_time = *localtime(&rawtime);                  // Captures the finish time
             metrics.data.msg_body.data_metrics.return_code = ret_state;                         // Stores the return code
 
             metrics.recipient = adjacent_nodes[1];                                              // Send the message to the lower node
