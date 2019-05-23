@@ -26,8 +26,8 @@ typedef enum errors{
     IPC_MSG_QUEUE_SEND,
     IPC_MSG_QUEUE_RECEIVE,
     IPC_MSG_QUEUE_RMID,
-    UNKNOWN_ERROR,
-    WENT_WRONG,
+    EXEC_FAILED,
+    UNKNOWN_ERROR
 }error_codes;
 
 // Renaming time measure struct type

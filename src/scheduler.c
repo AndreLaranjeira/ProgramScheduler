@@ -121,7 +121,7 @@ void panic_function(){
     // Kill all created nodes
     for(int i=0; i<N_MAX_NODES; i++){
         if(nodes_pid[i] != 0){
-            kill(nodes_pid[i], SIGKILL);
+            kill(nodes_pid[i], SIGABRT);
             count_killed_nodes++;
         }
     }
@@ -141,7 +141,7 @@ void panic_function(){
             "something went wrong at creation of nodes, please check if 'node' program file are in the same"
             "place of the scheduler program\n");
 
-    exit(WENT_WRONG);
+    exit(EXEC_FAILED);
 }
 
 
