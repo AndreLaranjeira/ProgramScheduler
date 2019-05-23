@@ -11,7 +11,6 @@
 
 #include "data_structures.h"
 
-void instance_context(char *string, int id);
 int handle_program(msg *request);
 int handle_metrics(msg *request);
 int handle_commands(msg *request);

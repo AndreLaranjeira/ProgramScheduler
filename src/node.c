@@ -6,7 +6,6 @@
 #define CONTEXT "Node"
 
 // Global variables
-char context[7];            // Used to print a node instance in runtime
 int node_id, msq_id;        // Node ID and IPC queue ID
 int *adjacent_nodes;        // Dinamically allocated array of integers to the adjacent nodes
 int last_init_job = 0;      // Holds the last run job ID
@@ -47,10 +46,8 @@ int main(int argc, char **argv){
         adjacent_nodes = (int *) realloc(adjacent_nodes, sizeof(int)*(adjacent_nodes[0] + 2));
         adjacent_nodes[0]++;
         adjacent_nodes[i-1] = (int) strtol(argv[i], &error_check, 0);
-        if(argv[i] == error_check){                                         // Grabs conversion errors
-            instance_context(context, node_id);
-            error(context,
-                    "Unable to decode argument '%s' value.\n", argv[i]);
+        if(argv[i] == error_check){
+            error(NULL, "[Node %d]: Unable to decode argument '%s' value.\n", node_id, argv[i]);
             free(adjacent_nodes);
             exit(INVALID_ARG);
         }
@@ -64,10 +61,8 @@ int main(int argc, char **argv){
             proceed = handle_metrics(&queue_listening);                     // Handles a message to return a program metrics
         else if(queue_listening.data.type == KIND_CONTROL)
             proceed = handle_commands(&queue_listening);                    // Handles a message having any commands
-        else {
-            instance_context(context, node_id);                             // Received a unknown .type code
-            error(context,
-                  "Unknown operation received. Aborting...\n");
+        else {                             // Received a unknown .type code
+            error(NULL, "[Node %d]: Unknown operation received. Aborting...\n", node_id);
             proceed = false;                                                // Stop the execution by breaking the loop
         }
     }
@@ -76,10 +71,6 @@ int main(int argc, char **argv){
 
     return proceed;
 
-}
-
-void instance_context(char *string, int id){                                // Prints a string with node_id
-    sprintf(string, "Node %d", id);
 }
 
 int handle_program(msg *request){                                       // Handles a request to execute something
@@ -116,9 +107,7 @@ int handle_program(msg *request){                                       // Handl
 
         }
         else {
-            instance_context(context, node_id);                                                 // Fork process error
-            error(context,
-                    "Could not fork a new process. Shutting down...\n");
+            error(NULL, "[Node %d]: Could not fork a new process. Shutting down...\n", node_id);                    // Fork process error
             answer = FORK_ERROR;
         }
     }
@@ -131,17 +120,21 @@ int handle_metrics(msg *request){
         request->recipient = adjacent_nodes[1];                             // Gets the lower neighbor ID
         msgsnd(msq_id, &request, sizeof(msg), 0666);                        // Here I'm assuming that the scheduler ID is always lower than any node
     }
+    return true;                                                            // Return clause possible of expansion in future
 }
 
-int handle_commands(msg *request){                                      // Decodes a command message
-    int answer = true;                                                  // In the beginning, we expect to continue execution
+int handle_commands(msg *request){                                          // Decodes a command message
+    int answer = true;                                                      // In the beginning, we expect to continue execution
     switch(request->data.msg_body.data_control.command_code){               // Switch between commands
         case EXIT_EXECUTION:                                                // Exit command = set return to false. (Break the outer loop in calling function)
-            answer = SUCCESS;
+            for(int i = 1; i <= adjacent_nodes[0]; i++){                    // Broadcast death message to neighbors
+                request->recipient = adjacent_nodes[i];
+                msgsnd(msq_id, request, sizeof(msg), 0666);
+            }
+            answer = SUCCESS;                                               // Now, you can rest in peace
             break;
         default:                                                            // Unknown command code, just ignore the message
-            instance_context(context, node_id);
-            warning(context, "An unknown command was just ignored.\n");
+            warning(NULL, "[Node %d]: An unknown command was just ignored.\n", node_id);
             break;
     }
     return answer;
