@@ -21,6 +21,7 @@
 #define END_PARAMS (char*) NULL
 #define N_MAX_PARAMS 7
 #define N_MAX_NODES 16
+#define NODE_PROGRAM "./node"
 
 // Function headers:
 int initialize_msq_top_level();
@@ -161,7 +162,7 @@ void fork_nodes(char *const nodes[N_MAX_NODES][N_MAX_PARAMS], int n_nodes){
         nodes_pid[i] = fork();
 
         if(nodes_pid[i] == 0){
-            execvp("./1node", nodes[i]);
+            execvp(NODE_PROGRAM, nodes[i]);
             kill(ppid, SIGABRT);
             exit(-1);
         }
