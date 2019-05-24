@@ -57,14 +57,13 @@ int main(int argc, char **argv){
 
     while(proceed == True){                                                 // Now, node is ready to run. 'Infinity loop' starts
         msgrcv(msq_id, &queue_listening, sizeof(queue_listening.data), node_id, 0);          // Blocked system call. Listening to the message queue
-        printf("Chegou o correio para o no: %d\n", node_id);
-        if(queue_listening.data.type == KIND_PROGRAM)                       // Decoding the received message type
+        if(queue_listening.data.type == KIND_PROGRAM)                        // Decoding the received message type
             proceed = handle_program(&queue_listening);                     // Handles a message to execute a program
         else if(queue_listening.data.type == KIND_METRICS)
             proceed = handle_metrics(&queue_listening);                     // Handles a message to return a program metrics
         else if(queue_listening.data.type == KIND_CONTROL)
             proceed = handle_commands(&queue_listening);                    // Handles a message having any commands
-        else {                             // Received a unknown .type code
+        else {                                                              // Received a unknown .type code
             error(NULL, "[Node %d]: Unknown operation received. Aborting...\n", node_id);
             proceed = False;                                                // Stop the execution by breaking the loop
         }
@@ -90,8 +89,10 @@ int handle_program(msg *request){                                       // Handl
 
     if(request->data.msg_body.data_prog.job > last_init_job){               // Eliminating duplicates by executing just higher job IDs
         for(int i = 1; i <= adjacent_nodes[0]; i++){                        // Broadcast execution message to neighbors
-            request->recipient = adjacent_nodes[i];
-            msgsnd(msq_id, request, sizeof(request->data), 0);
+            if(adjacent_nodes[i] != QUEUE_ID_SCHEDULER) {
+                request->recipient = adjacent_nodes[i];
+                msgsnd(msq_id, request, sizeof(request->data), 0);
+            }
         }
 
         last_init_job = request->data.msg_body.data_prog.job;               // Updating running job ID (this implies that we're accepting only higher IDs)
@@ -99,7 +100,15 @@ int handle_program(msg *request){                                       // Handl
 
         if(pid == 0){                                                       // Child process will load the new executable, via execvp
             execvp(request->data.msg_body.data_prog.argv[0],
-                   request->data.msg_body.data_prog.argv);
+                   (char* const*) request->data.msg_body.data_prog.argv);   // execvp(full_path_of_executable, argv); argv[0] = full_path_of_executable
+
+            for (int i = 0; i < request->data.msg_body.data_prog.argc; ++i) {
+                printf("Argv[%d]: %s\n", i, request->data.msg_body.data_prog.argv[i]);
+            }
+
+            error(NULL, "[Node %d]: Node could not start required executable. Exiting with %d code...\n", node_id, EXEC_FAILED);
+            exit(EXEC_FAILED);
+
         }
         else if (pid > 0) {                                                                     // Father process will start holding new metrics
             metrics.data.msg_body.data_metrics.job = last_init_job;                             // ID of the running job
@@ -107,12 +116,13 @@ int handle_program(msg *request){                                       // Handl
             metrics.data.msg_body.data_metrics.start_time = *localtime(&rawtime);
             wait(&ret_state);                                                                   // Wait for child process to finish
             time(&rawtime);
-            metrics.data.msg_body.data_metrics.end_time = *localtime(&rawtime);                  // Captures the finish time
+            metrics.data.msg_body.data_metrics.end_time = *localtime(&rawtime);                 // Captures the finish time
             metrics.data.msg_body.data_metrics.return_code = ret_state;                         // Stores the return code
 
             metrics.recipient = adjacent_nodes[1];                                              // Send the message to the lower node
-            msgsnd(msq_id, &metrics, sizeof(metrics.data), 0);                                           // Here I'm assuming that the scheduler ID is always lower than any node
-
+            if(msgsnd(msq_id, &metrics, sizeof(metrics.data), 0) == -1) {                                           // Here I'm assuming that the scheduler ID is always lower than any node
+                printf("Não voltou a metrica\n");
+            }
         }
         else {
             error(NULL, "[Node %d]: Could not fork a new process. Shutting down...\n", node_id);                    // Fork process error

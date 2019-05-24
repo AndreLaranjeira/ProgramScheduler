@@ -103,11 +103,10 @@ int main(int argc, char **argv){
 
     fwd_test.recipient = QUEUE_ID_NODE(0);
     fwd_test.data.type = KIND_PROGRAM;
-    fwd_test.data.msg_body.data_prog.job = 0;
+    fwd_test.data.msg_body.data_prog.job = 1;
     fwd_test.data.msg_body.data_prog.argc = 1;
     strcpy(fwd_test.data.msg_body.data_prog.argv[0], "./dummy");
-    if(msgsnd(msqid_nodes, &fwd_test, sizeof(fwd_test.data), 0) == -1)
-        printf("Deu errado!\n");
+    msgsnd(msqid_nodes, &fwd_test, sizeof(fwd_test.data), 0);
 
     for(int i=0; i<N_MAX_NODES; i++){
         if(nodes_pid[i] !=0){

@@ -8,10 +8,14 @@
 #define QUEUE_TOP_LEVEL (0x8166)
 #define QUEUE_NODES (0x2458)
 
+// Define message parameters
+#define MAX_ARGS        20
+#define MAX_ARG_LEN     26
+
 // Define processes message IDs
 // This helps processes to know which message is for them and
 // how to send message to another process
-#define QUEUE_ID_NODE(id) (id+4)
+#define QUEUE_ID_NODE(id) ((id)+4)
 #define QUEUE_ID_EXEC (2)
 #define QUEUE_ID_SHUTDOWN (3)
 #define QUEUE_ID_SCHEDULER (1)
@@ -68,7 +72,7 @@ typedef struct message_data_program {
     unsigned long delay; //Time in seconds to delay. Nodes ignore this
     int argc;
     //char **argv; // Testar se passar o argv original funciona
-    char argv[20][26]; // Se der merda use esse (até 20 argumentos de 25 letras + \0)
+    char argv[MAX_ARGS][MAX_ARG_LEN]; // Se der merda use esse (até 20 argumentos de 25 letras + \0)
 } msg_data_program;
 
 // Data collected from each node for computing metrics
