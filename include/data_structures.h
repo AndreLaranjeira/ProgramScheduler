@@ -2,7 +2,10 @@
 #define DATA_STRUCTURES_H_
 
 #include <stdint.h>
+#include <sys/types.h>
 #include <time.h>
+
+// Macros:
 
 // Define queue IDs
 #define QUEUE_TOP_LEVEL (0x8166)
@@ -16,8 +19,12 @@
 #define QUEUE_ID_SHUTDOWN (17)
 #define QUEUE_ID_SCHEDULER (-1)
 
-// Standardization of all error codes
-// As the project increments, please add the new error codes to
+// Fixed argument number and length for the msg_data_program data type:
+#define DATA_PROGRAM_MAX_ARG_NUM 10
+#define DATA_PROGRAM_MAX_ARG_LEN 100
+
+// Standardization of all error codes.
+// As the project increments, please add the new error codes here.
 typedef enum errors{
     COUNT_ARGS = 1,
     INVALID_ARG,
@@ -27,6 +34,7 @@ typedef enum errors{
     IPC_MSG_QUEUE_RECEIVE,
     IPC_MSG_QUEUE_RMID,
     EXEC_FAILED,
+    SCHEDULER_DOWN,
     UNKNOWN_ERROR
 }error_codes;
 
@@ -38,8 +46,7 @@ typedef struct message_data_program {
   int32_t job; //-1 for exec -> scheduler communication
   unsigned long delay; //Time in seconds to delay. Nodes ignore this
   int argc;
-  char **argv; // Testar se passar o argv original funciona
-  //char argv[20][26]; // Se der merda use esse (até 20 argumentos de 25 letras + \0)
+  char argv[DATA_PROGRAM_MAX_ARG_NUM][DATA_PROGRAM_MAX_ARG_LEN];
 } msg_data_program;
 
 // Data collected from each node for computing metrics
@@ -55,12 +62,19 @@ typedef struct message_data_control {
   int a; // Pra num dar erro
 } msg_data_control;
 
+// Data informing a process PID:
+typedef struct message_data_pid {
+  long sender_id;   // Identify who sent the message.
+  pid_t pid;        // PID from the sender.
+} msg_data_pid;
+
 // Enumerate types of messages
 typedef enum message_kind {
   KIND_ERROR,
   KIND_PROGRAM,
   KIND_METRICS,
-  KIND_CONTROL
+  KIND_CONTROL,
+  KIND_PID
 }msg_kind;
 
 // Define general message data structure
@@ -71,6 +85,7 @@ typedef struct message_data {
     msg_data_program data_prog; // For queueing and starting programs and
     msg_data_metrics data_metrics; // For sending metrics from the nodes to the scheduler
     msg_data_control data_control; // For sending shutdowns and other signals needed
+    msg_data_pid data_pid; // For sending a process' PID to another process.
   } msg_body;
 } msg_data;
 

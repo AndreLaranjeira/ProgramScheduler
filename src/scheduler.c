@@ -4,9 +4,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 #include <errno.h>
+#include <signal.h>
 #include <sys/wait.h>
+#include <unistd.h>
+
 // - To messages queues
 #include <sys/types.h>
 #include <sys/ipc.h>
@@ -35,7 +37,9 @@ int init_tree_topology();
 
 void panic_function();
 void set_panic_flag();
+void shutdown();
 
+// Structs:
 typedef struct topology_name_function{
     char* name;
     int (*init)();
@@ -55,14 +59,18 @@ int panic_flag = 0;
 // Main function:
 int main(int argc, char **argv){
 
+    // Variables declaration:
+    int msqid_top_level, msqid_nodes;
     int status;
-
-    // Variables declaration
+    msg shutdown_info;
     topology topology_options[] = {{"hypercube", &init_hypercube_topology},
                                    {"torus", &init_torus_topology},
                                    {"tree", &init_tree_topology}};
     topology selected_topology = {"", NULL};
     char previous_topologies[80] = "";
+
+    // Signal assignment:
+    signal(SIGINT, shutdown);       // Allows CTRL-C to shutdown!
 
     // Arguments number handling:
     if(argc != 2){
@@ -99,6 +107,23 @@ int main(int argc, char **argv){
     // Create messages queue for nodes and scheduler to communicate
     msqid_nodes = initialize_msq_nodes();
 
+    // First things first. The shutdown process needs to know this process' PID
+    // to able to send a SIGTERM. So we will write a message informing our PID.
+
+    // Write the message adequately:
+    shutdown_info.recipient = QUEUE_ID_SHUTDOWN;
+    shutdown_info.data.type = KIND_PID;
+    shutdown_info.data.msg_body.data_pid.sender_id = QUEUE_ID_SCHEDULER;
+    shutdown_info.data.msg_body.data_pid.pid = getpid();
+
+    // Send the message:
+    if(msgsnd(msqid_top_level, &shutdown_info, sizeof(shutdown_info.data), 0)
+       == -1) {
+      error(CONTEXT,
+            "A message could not be sent! Please check your message queues.\n");
+      exit(IPC_MSG_QUEUE_SEND);
+    }
+  
     // Call the topology initialization
     selected_topology.init();
 
@@ -323,4 +348,8 @@ void destroy_msq_nodes(){
                 "An error occur trying to destroy a messages queue for nodes and scheduler !\n");
         exit(IPC_MSG_QUEUE_RMID);
     }
+}
+
+void shutdown() {
+    info(CONTEXT, "Shutdown signal received! Shutting down scheduler...\n");
 }
