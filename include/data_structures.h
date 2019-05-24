@@ -16,7 +16,7 @@
 #define QUEUE_ID_SHUTDOWN (17)
 #define QUEUE_ID_SCHEDULER (-1)
 
-typedef enum tf{false, true} boolean;
+typedef enum tf{False, True} boolean;
 
 // Standardization of all error codes
 // As the project increments, please add the new error codes to
@@ -32,6 +32,7 @@ typedef enum returns{
     SCHEDULER_DOWN,
     FORK_ERROR,
     EXEC_FAILED,
+    ABORT_RECEIVED,
     UNKNOWN_ERROR
 }return_codes;
 

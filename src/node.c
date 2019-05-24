@@ -14,7 +14,7 @@ int last_init_job = 0;      // Holds the last run job ID
 int main(int argc, char **argv){
 
     char *error_check;                                                     // Pointer used to detect char to int conversion errors
-    int proceed = true;                                                    // Int to hold the stop condition and will return program stop condition
+    int proceed = True;                                                    // Int to hold the stop condition and will return program stop condition
     msg queue_listening;                                                   // Message variable to receive messages from queue
 
     if(argc < 2 || argc > 7){                                              // Argument amount check
@@ -53,7 +53,9 @@ int main(int argc, char **argv){
         }
     }
 
-    while(proceed == true){                                                 // Now, node is ready to run. 'Infinity loop' starts
+    signal(SIGABRT, handle_abort);                                          // Before starting,
+
+    while(proceed == True){                                                 // Now, node is ready to run. 'Infinity loop' starts
         msgrcv(msq_id, &queue_listening, sizeof(msg), node_id, 0666);       // Blocked system call. Listening to the message queue
         if(queue_listening.data.type == KIND_PROGRAM)                       // Decoding the received message type
             proceed = handle_program(&queue_listening);                     // Handles a message to execute a program
@@ -63,7 +65,7 @@ int main(int argc, char **argv){
             proceed = handle_commands(&queue_listening);                    // Handles a message having any commands
         else {                             // Received a unknown .type code
             error(NULL, "[Node %d]: Unknown operation received. Aborting...\n", node_id);
-            proceed = false;                                                // Stop the execution by breaking the loop
+            proceed = False;                                                // Stop the execution by breaking the loop
         }
     }
 
@@ -78,7 +80,7 @@ int handle_program(msg *request){                                       // Handl
     int pid;                                                                // PID of child process
     msg metrics;                                                            // Message to hold the running process statistics
     time_t rawtime;                                                         // Variable to grab current CPU time
-    int answer = true;                                                  // Control variable to continue the execution
+    int answer = True;                                                  // Control variable to continue the execution
 
     if(request->data.msg_body.data_prog.job > last_init_job){               // Eliminating duplicates by executing just higher job IDs
         for(int i = 1; i <= adjacent_nodes[0]; i++){                        // Broadcast execution message to neighbors
@@ -115,16 +117,21 @@ int handle_program(msg *request){                                       // Handl
     return answer;
 }
 
+void handle_abort(){
+    free(adjacent_nodes);
+    exit(ABORT_RECEIVED);
+}
+
 int handle_metrics(msg *request){
     if(request->data.msg_body.data_metrics.job >= last_init_job){           // last_init_job variable is updated at handle_program function
         request->recipient = adjacent_nodes[1];                             // Gets the lower neighbor ID
         msgsnd(msq_id, &request, sizeof(msg), 0666);                        // Here I'm assuming that the scheduler ID is always lower than any node
     }
-    return true;                                                            // Return clause possible of expansion in future
+    return True;                                                            // Return clause possible of expansion in future
 }
 
 int handle_commands(msg *request){                                          // Decodes a command message
-    int answer = true;                                                      // In the beginning, we expect to continue execution
+    int answer = True;                                                      // In the beginning, we expect to continue execution
     switch(request->data.msg_body.data_control.command_code){               // Switch between commands
         case EXIT_EXECUTION:                                                // Exit command = set return to false. (Break the outer loop in calling function)
             for(int i = 1; i <= adjacent_nodes[0]; i++){                    // Broadcast death message to neighbors

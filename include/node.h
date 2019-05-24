@@ -11,6 +11,7 @@
 
 #include "data_structures.h"
 
+void handle_abort();
 int handle_program(msg *request);
 int handle_metrics(msg *request);
 int handle_commands(msg *request);
