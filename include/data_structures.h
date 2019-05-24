@@ -11,11 +11,12 @@
 // Define processes message IDs
 // This helps processes to know which message is for them and
 // how to send message to another process
-#define QUEUE_ID_NODE(id) (id)
+#define QUEUE_ID_NODE(id) (id+4)
 #define QUEUE_ID_EXEC (2)
 #define QUEUE_ID_SHUTDOWN (3)
 #define QUEUE_ID_SCHEDULER (1)
 
+#define SCHEDULER "1"
 #define N0      "4"
 #define N1      "5"
 #define N2      "6"
