@@ -6,7 +6,9 @@
 #include <string.h>
 #include <errno.h>
 #include <signal.h>
+#include <sys/wait.h>
 #include <unistd.h>
+
 // - To messages queues
 #include <sys/types.h>
 #include <sys/ipc.h>
@@ -18,17 +20,23 @@
 
 // Macros:
 #define CONTEXT "Scheduler"
+#define END_PARAMS (char*) NULL
+#define N_MAX_PARAMS 8
+#define N_MAX_NODES 16
+#define NODE_PROGRAM "node"
 
 // Function headers:
 int initialize_msq_top_level();
 int initialize_msq_nodes();
-void destroy_msq_top_level(int msqid_top_level);
-void destroy_msq_nodes(int msqid_nodes);
+void destroy_msq_top_level();
+void destroy_msq_nodes();
 
 int init_hypercube_topology();
 int init_torus_topology();
 int init_tree_topology();
 
+void panic_function();
+void set_panic_flag();
 void shutdown();
 
 // Structs:
@@ -37,11 +45,23 @@ typedef struct topology_name_function{
     int (*init)();
 }topology;
 
+
+// Global Variables
+pid_t nodes_pid[N_MAX_NODES];
+int msqid_top_level, msqid_nodes;
+int panic_flag = 0;
+
+// Signal usage:
+// SIGABRT: Sets a panic flag to 1. The panic_function will soon be called.
+// SIGINT: Terminates the program in an orderly way. Resources are deallocated.
+// SIGTERM: Die without asking any further questions.
+
 // Main function:
 int main(int argc, char **argv){
 
     // Variables declaration:
     int msqid_top_level, msqid_nodes;
+    int status;
     msg shutdown_info;
     topology topology_options[] = {{"hypercube", &init_hypercube_topology},
                                    {"torus", &init_torus_topology},
@@ -78,6 +98,9 @@ int main(int argc, char **argv){
         exit(INVALID_ARG);
     }
 
+    // Set the abort function to creation of nodes
+    signal(SIGABRT, set_panic_flag);
+
     // Create messages queue for shutdown, execute and scheduler to communicate
     msqid_top_level = initialize_msq_top_level();
 
@@ -100,35 +123,178 @@ int main(int argc, char **argv){
             "A message could not be sent! Please check your message queues.\n");
       exit(IPC_MSG_QUEUE_SEND);
     }
-
-    // TODO - neste ponto a fila esta criada use-a com sabedoria!
-
+  
     // Call the topology initialization
     selected_topology.init();
 
-    // Destroy messages queue of shutdown, execute and scheduler
-    destroy_msq_top_level(msqid_top_level);
+    // TODO - implementar o shutdown e o wait, abaixo segue um placeholder
 
-    // Destroy messages queue of nodes and scheduler
-    destroy_msq_nodes(msqid_nodes);
+    for(int i=0; i<N_MAX_NODES; i++){
+        if(nodes_pid[i] !=0){
+            wait(&status);
+        }
+    }
+
+    // Clean up the message queues:
+    destroy_msq_top_level();
+    destroy_msq_nodes();
 
     return 0;
+}
+
+// Function to set panic flag:
+void set_panic_flag() {
+    panic_flag = 1;
+}
+
+/**
+ * If something goes wrong at creation of the nodes
+ * this function will kill all created nodes
+ * finalize the queues messages and exit
+ * */
+void panic_function(){
+
+    int count_killed_nodes = 0;
+    int status;
+
+    // Kill all created nodes
+    for(int i=0; i<N_MAX_NODES; i++){
+        if(nodes_pid[i] != 0){
+            kill(nodes_pid[i], SIGTERM);  // Must not be SIGABRT!
+            count_killed_nodes++;
+        }
+    }
+
+    // wait for killed nodes
+    for(int i=0; i<count_killed_nodes; i++){
+        wait(&status);
+    }
+
+    // Destroy messages queue of shutdown, execute and scheduler
+    destroy_msq_top_level();
+
+    // Destroy messages queue of nodes and scheduler
+    destroy_msq_nodes();
+
+    error(CONTEXT,
+            "something went wrong at creation of nodes, please check if 'node' program file are in the same"
+            "place of the scheduler program\n");
+
+    exit(EXEC_FAILED);
+}
+
+
+/**
+ * Create the 'nodes' process 'n_nodes' times
+ * and if something goes wrong at creation sends a SIGABRT
+ * to parent (scheduler) to kill all nodes created
+ * */
+void fork_nodes(char *const nodes[N_MAX_NODES][N_MAX_PARAMS], int n_nodes){
+
+    // Parent pid
+    pid_t ppid = getpid();
+    char program_path[128] = "./";
+    strcat(program_path, NODE_PROGRAM);
+
+    // Initialize all the pids with 0
+    for(int i=0; i < N_MAX_NODES; i++) nodes_pid[i]=0;
+
+    for(int i=0; i<n_nodes; i++){
+        nodes_pid[i] = fork();
+
+        if(nodes_pid[i] == 0){
+            execvp(program_path, nodes[i]);
+            kill(ppid, SIGABRT);
+            exit(-1);
+        }
+    }
+
+    if(panic_flag == 1)
+        panic_function();
 
 }
 
 // Function implementations:
 int init_hypercube_topology(){
-    printf("\ncreate hypercube here\n");
+    int n_nodes = 16;
+    char *const topology[N_MAX_NODES][N_MAX_PARAMS] = {
+            {NODE_PROGRAM,"0", "-1", "1","2","4","8", END_PARAMS},
+            {NODE_PROGRAM,"1", "0","3","5","9", END_PARAMS},
+            {NODE_PROGRAM,"2", "0","3","6","10", END_PARAMS},
+            {NODE_PROGRAM,"3", "1","2","7","11", END_PARAMS},
+            {NODE_PROGRAM,"4", "0","5","6","12", END_PARAMS},
+            {NODE_PROGRAM,"5", "1","4","7","13", END_PARAMS},
+            {NODE_PROGRAM,"6", "2","4","7","14", END_PARAMS},
+            {NODE_PROGRAM,"7", "3","5","6","15", END_PARAMS},
+            {NODE_PROGRAM,"8", "0","9","10","12", END_PARAMS},
+            {NODE_PROGRAM,"9", "1","8","11","13", END_PARAMS},
+            {NODE_PROGRAM,"10", "2","8","11","14", END_PARAMS},
+            {NODE_PROGRAM,"11", "4","9","10","15", END_PARAMS},
+            {NODE_PROGRAM,"12", "4","8","13","14", END_PARAMS},
+            {NODE_PROGRAM,"13", "5","9","12","15", END_PARAMS},
+            {NODE_PROGRAM,"14", "6","10","12","15", END_PARAMS},
+            {NODE_PROGRAM,"15", "7","11","13","14", END_PARAMS}
+            //{Program name, id_node, neighbors, end of params}
+    };
+
+    // Fork all the nodes
+    fork_nodes(topology, n_nodes);
+
     return 0;
 }
 
 int init_torus_topology(){
-    printf("\ncreate torus here\n");
+    int n_nodes = 16;
+    char *const topology[N_MAX_NODES][N_MAX_PARAMS] = {
+            {NODE_PROGRAM,"0", "-1", "1","3","4","12", END_PARAMS},
+            {NODE_PROGRAM,"1", "0","2","5","13", END_PARAMS},
+            {NODE_PROGRAM,"2", "1","3","6","14", END_PARAMS},
+            {NODE_PROGRAM,"3", "0","2","7","15", END_PARAMS},
+            {NODE_PROGRAM,"4", "0","5","7","8", END_PARAMS},
+            {NODE_PROGRAM,"5", "1","4","6","9", END_PARAMS},
+            {NODE_PROGRAM,"6", "2","5","5","10", END_PARAMS},
+            {NODE_PROGRAM,"7", "3","4","6","11", END_PARAMS},
+            {NODE_PROGRAM,"8", "4","9","11","12", END_PARAMS},
+            {NODE_PROGRAM,"9", "5","8","10","13", END_PARAMS},
+            {NODE_PROGRAM,"10", "6","9","11","14", END_PARAMS},
+            {NODE_PROGRAM,"11", "7","8","10","15", END_PARAMS},
+            {NODE_PROGRAM,"12", "0","8","13","15", END_PARAMS},
+            {NODE_PROGRAM,"13", "1","9","12","14", END_PARAMS},
+            {NODE_PROGRAM,"14", "2","10","13","15", END_PARAMS},
+            {NODE_PROGRAM,"15", "3","11","12","14", END_PARAMS}
+            //{Program name, id_node, neighbors, end of params}
+    };
+
+    // Fork all the nodes
+    fork_nodes(topology, n_nodes);
+
     return 0;
 }
 
 int init_tree_topology(){
-    printf("\ncreate fat tree here\n");
+    int n_nodes = 15;
+    char *const topology[N_MAX_NODES][N_MAX_PARAMS] = {
+            {NODE_PROGRAM,"0", "-1", "1","2","","", END_PARAMS},
+            {NODE_PROGRAM,"1", "0","3","4","", END_PARAMS},
+            {NODE_PROGRAM,"2", "0","5","6","", END_PARAMS},
+            {NODE_PROGRAM,"3", "2","7","8","", END_PARAMS},
+            {NODE_PROGRAM,"4", "2","9","10","", END_PARAMS},
+            {NODE_PROGRAM,"5", "2","11","12","", END_PARAMS},
+            {NODE_PROGRAM,"6", "2","13","14","", END_PARAMS},
+            {NODE_PROGRAM,"7", "3","","","", END_PARAMS},
+            {NODE_PROGRAM,"8", "3","","","", END_PARAMS},
+            {NODE_PROGRAM,"9", "4","","","", END_PARAMS},
+            {NODE_PROGRAM,"10", "4","","","", END_PARAMS},
+            {NODE_PROGRAM,"11", "5","","","", END_PARAMS},
+            {NODE_PROGRAM,"12", "5","","","", END_PARAMS},
+            {NODE_PROGRAM,"13", "6","","","", END_PARAMS},
+            {NODE_PROGRAM,"14", "6","","","", END_PARAMS},
+            //{Program name, id_node, neighbors, end of params}
+    };
+
+    // Fork all the nodes
+    fork_nodes(topology, n_nodes);
+
     return 0;
 }
 
@@ -162,7 +328,7 @@ int initialize_msq_nodes(){
     return msqid_nodes;
 }
 
-void destroy_msq_top_level(int msqid_top_level){
+void destroy_msq_top_level(){
     if(msgctl(msqid_top_level, IPC_RMID, NULL) != -1){
         info(CONTEXT,
              "Messages queue for shutdown, execute and scheduler destroyed with success!\n");
@@ -173,7 +339,7 @@ void destroy_msq_top_level(int msqid_top_level){
     }
 }
 
-void destroy_msq_nodes(int msqid_nodes){
+void destroy_msq_nodes(){
     if(msgctl(msqid_nodes, IPC_RMID, NULL) != -1){
         info(CONTEXT,
              "Messages queue for nodes and scheduler destroyed with success!\n");
