@@ -15,7 +15,7 @@ int last_init_job = 0;      // Holds the last run job ID
 int main(int argc, char **argv){
 
     char *error_check;                                                     // Pointer used to detect char to int conversion errors
-    int proceed = true;                                                    // Int to hold the stop condition and will return program stop condition
+    int proceed = True;                                                    // Int to hold the stop condition and will return program stop condition
     msg queue_listening;                                                   // Message variable to receive messages from queue
 
     if(argc < 2 || argc > 7){                                              // Argument amount check
@@ -56,7 +56,7 @@ int main(int argc, char **argv){
         }
     }
 
-    while(proceed == true){                                                 // Now, node is ready to run. 'Infinity loop' starts
+    while(proceed == True){                                                 // Now, node is ready to run. 'Infinity loop' starts
         msgrcv(msq_id, &queue_listening, sizeof(msg), node_id, 0666);       // Blocked system call. Listening to the message queue
         if(queue_listening.data.type == KIND_PROGRAM)                       // Decoding the received message type
             proceed = handle_program(&queue_listening);                     // Handles a message to execute a program
@@ -68,7 +68,7 @@ int main(int argc, char **argv){
             instance_context(context, node_id);                             // Received a unknown .type code
             error(context,
                   "Unknown operation received. Aborting...\n");
-            proceed = false;                                                // Stop the execution by breaking the loop
+            proceed = False;                                                // Stop the execution by breaking the loop
         }
     }
 
@@ -87,7 +87,7 @@ int handle_program(msg *request){                                       // Handl
     int pid;                                                                // PID of child process
     msg metrics;                                                            // Message to hold the running process statistics
     time_t rawtime;                                                         // Variable to grab current CPU time
-    int answer = true;                                                  // Control variable to continue the execution
+    int answer = True;                                                  // Control variable to continue the execution
 
     if(request->data.msg_body.data_prog.job > last_init_job){               // Eliminating duplicates by executing just higher job IDs
         for(int i = 1; i <= adjacent_nodes[0]; i++){                        // Broadcast execution message to neighbors
@@ -105,10 +105,10 @@ int handle_program(msg *request){                                       // Handl
         else if (pid > 0) {                                                                     // Father process will start holding new metrics
             metrics.data.msg_body.data_metrics.job = last_init_job;                             // ID of the running job
             time(&rawtime);                                                                     // Captures the start time
-            metrics.data.msg_body.data_metrics.start_time = localtime(&rawtime);
+            metrics.data.msg_body.data_metrics.start_time = *localtime(&rawtime);
             wait(&ret_state);                                                                   // Wait for child process to finish
             time(&rawtime);
-            metrics.data.msg_body.data_metrics.end_time = localtime(&rawtime);                  // Captures the finish time
+            metrics.data.msg_body.data_metrics.end_time = *localtime(&rawtime);                  // Captures the finish time
             metrics.data.msg_body.data_metrics.return_code = ret_state;                         // Stores the return code
 
             metrics.recipient = adjacent_nodes[1];                                              // Send the message to the lower node
@@ -134,9 +134,9 @@ int handle_metrics(msg *request){
 }
 
 int handle_commands(msg *request){                                      // Decodes a command message
-    int answer = true;                                                  // In the beginning, we expect to continue execution
+    int answer = True;                                                  // In the beginning, we expect to continue execution
     switch(request->data.msg_body.data_control.command_code){               // Switch between commands
-        case EXIT_EXECUTION:                                                // Exit command = set return to false. (Break the outer loop in calling function)
+        case EXIT_EXECUTION:                                                // Exit command = set return to False. (Break the outer loop in calling function)
             answer = SUCCESS;
             break;
         default:                                                            // Unknown command code, just ignore the message

@@ -23,7 +23,7 @@
 #define DATA_PROGRAM_MAX_ARG_NUM 10
 #define DATA_PROGRAM_MAX_ARG_LEN 100
 
-typedef enum tf{false, true} boolean;
+typedef enum tf{False, True} boolean;
 
 // Standardization of all error codes
 // As the project increments, please add the new error codes to
@@ -32,6 +32,7 @@ typedef enum returns{
     COUNT_ARGS,
     INVALID_ARG,
     FILE_ERROR,
+    ALLOC_ERROR,
     IPC_MSG_QUEUE_CREAT,
     IPC_MSG_QUEUE_SEND,
     IPC_MSG_QUEUE_RECEIVE,
@@ -46,7 +47,7 @@ typedef enum commands{
 }command_codes;
 
 // Renaming time measure struct type
-typedef struct tm * time_measure;
+typedef struct tm time_measure;
 
 // Data needed to start a program
 typedef struct message_data_program {
@@ -101,5 +102,30 @@ typedef struct message {
     long recipient; // Use one of the IDs defined above here
     msg_data data; // The important stuff
 } msg;
+
+//Scheduler table
+typedef struct item {
+  int32_t job;
+  time_t start_time;
+  int argc;
+  char argv[DATA_PROGRAM_MAX_ARG_NUM][DATA_PROGRAM_MAX_ARG_LEN];
+  struct item *next;
+} table_item;
+
+
+typedef struct table{
+  table_item *first;
+  table_item *last;
+  table_item *next;
+  time_t next_alarm;
+  int count;
+  int last_job;
+} scheduler_table;
+
+return_codes create_table(scheduler_table **table);
+return_codes add_table_item(scheduler_table *table, table_item item);
+// return_codes remove_table_item(scheduler_table *table, int32_t job);
+return_codes delete_table(scheduler_table **table);
+// return_codes _table_item(table_item item);
 
 #endif /*DATA_STRUCTURES_H_*/

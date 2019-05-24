@@ -29,7 +29,14 @@ int init_hypercube_topology();
 int init_torus_topology();
 int init_tree_topology();
 
+msg_kind get_message(int msqid, msg *message_received);
+return_codes add_table(msg_data received);
+return_codes add_metrics(msg_data received);
+return_codes treat_message(msg received, msg_kind kind);
+
 void shutdown();
+
+boolean received_shutdown = False;
 
 // Structs:
 typedef struct topology_name_function{
@@ -42,7 +49,9 @@ int main(int argc, char **argv){
 
     // Variables declaration:
     int msqid_top_level, msqid_nodes;
-    msg shutdown_info;
+    msg shutdown_info, received;
+    msg_kind kind;
+    return_codes status;
     topology topology_options[] = {{"hypercube", &init_hypercube_topology},
                                    {"torus", &init_torus_topology},
                                    {"tree", &init_tree_topology}};
@@ -105,6 +114,16 @@ int main(int argc, char **argv){
 
     // Call the topology initialization
     selected_topology.init();
+
+    // Main loop
+    while(!received_shutdown) {
+
+        kind = get_message(msqid_top_level, &received);
+        if (kind != KIND_ERROR){
+            status = treat_message(received, kind);
+        }
+
+    }
 
     // Destroy messages queue of shutdown, execute and scheduler
     destroy_msq_top_level(msqid_top_level);
@@ -181,6 +200,49 @@ void destroy_msq_nodes(int msqid_nodes){
         error(CONTEXT,
                 "An error occur trying to destroy a messages queue for nodes and scheduler !\n");
         exit(IPC_MSG_QUEUE_RMID);
+    }
+}
+
+msg_kind get_message(int msqid, msg *message_received)
+{
+    if (msgrcv(msqid, message_received, sizeof(msg_data), QUEUE_ID_SCHEDULER, IPC_NOWAIT) == -1){
+        return KIND_ERROR;
+    }
+    return message_received->data.type;
+}
+
+return_codes add_table(msg_data received)
+{
+
+    return SUCCESS;
+}
+
+return_codes add_metrics(msg_data received)
+{
+
+    return SUCCESS;
+}
+
+return_codes treat_message(msg received, msg_kind kind)
+{
+    switch (kind)
+    {
+    case KIND_PROGRAM:
+        add_table(received.data);
+        break;
+
+    case KIND_METRICS:
+        add_metrics(received.data);
+        break;
+
+    case KIND_CONTROL:
+        /* code */
+        break;
+
+    case KIND_PID:
+    case KIND_ERROR:
+    default:
+        return INVALID_ARG;
     }
 }
 
