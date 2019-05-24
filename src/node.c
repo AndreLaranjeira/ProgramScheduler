@@ -53,7 +53,7 @@ int main(int argc, char **argv){
         }
     }
 
-    signal(SIGABRT, handle_abort);                                          // Before starting,
+    signal(SIGTERM, handle_terminate);                                      // Before starting, bind the SIGTERM signal. Scheduler may used this when topology is violated
 
     while(proceed == True){                                                 // Now, node is ready to run. 'Infinity loop' starts
         msgrcv(msq_id, &queue_listening, sizeof(msg), node_id, 0666);       // Blocked system call. Listening to the message queue
@@ -73,6 +73,11 @@ int main(int argc, char **argv){
 
     return proceed;
 
+}
+
+void handle_terminate(){
+    free(adjacent_nodes);
+    exit(ABORT_RECEIVED);
 }
 
 int handle_program(msg *request){                                       // Handles a request to execute something
@@ -115,11 +120,6 @@ int handle_program(msg *request){                                       // Handl
     }
 
     return answer;
-}
-
-void handle_abort(){
-    free(adjacent_nodes);
-    exit(ABORT_RECEIVED);
 }
 
 int handle_metrics(msg *request){

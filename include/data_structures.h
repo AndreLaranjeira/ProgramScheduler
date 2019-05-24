@@ -48,8 +48,8 @@ typedef struct message_data_program {
     int32_t job; //-1 for exec -> scheduler communication
     unsigned long delay; //Time in seconds to delay. Nodes ignore this
     int argc;
-    char **argv; // Testar se passar o argv original funciona
-    //char argv[20][26]; // Se der merda use esse (até 20 argumentos de 25 letras + \0)
+    //char **argv; // Testar se passar o argv original funciona
+    char argv[20][26]; // Se der merda use esse (até 20 argumentos de 25 letras + \0)
 } msg_data_program;
 
 // Data collected from each node for computing metrics
