@@ -14,7 +14,7 @@
 #define QUEUE_ID_NODE(id) (id)
 #define QUEUE_ID_EXEC (16)
 #define QUEUE_ID_SHUTDOWN (17)
-#define QUEUE_ID_SCHEDULER (18)
+#define QUEUE_ID_SCHEDULER (-1)
 
 typedef enum tf{false, true} boolean;
 
@@ -31,6 +31,7 @@ typedef enum returns{
     IPC_MSG_QUEUE_RMID,
     SCHEDULER_DOWN,
     FORK_ERROR,
+    EXEC_FAILED,
     UNKNOWN_ERROR
 }return_codes;
 
