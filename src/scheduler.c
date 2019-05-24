@@ -26,14 +26,15 @@
 // Function headers:
 int initialize_msq_top_level();
 int initialize_msq_nodes();
-void destroy_msq_top_level(int msqid_top_level);
-void destroy_msq_nodes(int msqid_nodes);
+void destroy_msq_top_level();
+void destroy_msq_nodes();
 
 int init_hypercube_topology();
 int init_torus_topology();
 int init_tree_topology();
 
 void panic_function();
+void set_panic_flag();
 
 typedef struct topology_name_function{
     char* name;
@@ -42,9 +43,14 @@ typedef struct topology_name_function{
 
 
 // Global Variables
-int nodes_pid[N_MAX_NODES];
+pid_t nodes_pid[N_MAX_NODES];
 int msqid_top_level, msqid_nodes;
+int panic_flag = 0;
 
+// Signal usage:
+// SIGABRT: Sets a panic flag to 1. The panic_function will soon be called.
+// SIGINT: Terminates the program in an orderly way. Resources are deallocated.
+// SIGTERM: Die without asking any further questions.
 
 // Main function:
 int main(int argc, char **argv){
@@ -85,7 +91,7 @@ int main(int argc, char **argv){
     }
 
     // Set the abort function to creation of nodes
-    signal(SIGABRT, panic_function);
+    signal(SIGABRT, set_panic_flag);
 
     // Create messages queue for shutdown, execute and scheduler to communicate
     msqid_top_level = initialize_msq_top_level();
@@ -104,9 +110,17 @@ int main(int argc, char **argv){
         }
     }
 
+    // Clean up the message queues:
+    destroy_msq_top_level();
+    destroy_msq_nodes();
+
     return 0;
 }
 
+// Function to set panic flag:
+void set_panic_flag() {
+    panic_flag = 1;
+}
 
 /**
  * If something goes wrong at creation of the nodes
@@ -121,7 +135,7 @@ void panic_function(){
     // Kill all created nodes
     for(int i=0; i<N_MAX_NODES; i++){
         if(nodes_pid[i] != 0){
-            kill(nodes_pid[i], SIGABRT);
+            kill(nodes_pid[i], SIGTERM);  // Must not be SIGABRT!
             count_killed_nodes++;
         }
     }
@@ -132,10 +146,10 @@ void panic_function(){
     }
 
     // Destroy messages queue of shutdown, execute and scheduler
-    destroy_msq_top_level(msqid_top_level);
+    destroy_msq_top_level();
 
     // Destroy messages queue of nodes and scheduler
-    destroy_msq_nodes(msqid_nodes);
+    destroy_msq_nodes();
 
     error(CONTEXT,
             "something went wrong at creation of nodes, please check if 'node' program file are in the same"
@@ -153,7 +167,7 @@ void panic_function(){
 void fork_nodes(char *const nodes[N_MAX_NODES][N_MAX_PARAMS], int n_nodes){
 
     // Parent pid
-    int ppid = getpid();
+    pid_t ppid = getpid();
     char program_path[128] = "./";
     strcat(program_path, NODE_PROGRAM);
 
@@ -169,6 +183,10 @@ void fork_nodes(char *const nodes[N_MAX_NODES][N_MAX_PARAMS], int n_nodes){
             exit(-1);
         }
     }
+
+    if(panic_flag == 1)
+        panic_function();
+
 }
 
 // Function implementations:
@@ -285,7 +303,7 @@ int initialize_msq_nodes(){
     return msqid_nodes;
 }
 
-void destroy_msq_top_level(int msqid_top_level){
+void destroy_msq_top_level(){
     if(msgctl(msqid_top_level, IPC_RMID, NULL) != -1){
         info(CONTEXT,
              "Messages queue for shutdown, execute and scheduler destroyed with success!\n");
@@ -296,7 +314,7 @@ void destroy_msq_top_level(int msqid_top_level){
     }
 }
 
-void destroy_msq_nodes(int msqid_nodes){
+void destroy_msq_nodes(){
     if(msgctl(msqid_nodes, IPC_RMID, NULL) != -1){
         info(CONTEXT,
              "Messages queue for nodes and scheduler destroyed with success!\n");
