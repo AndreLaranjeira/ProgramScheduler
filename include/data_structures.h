@@ -12,9 +12,27 @@
 // This helps processes to know which message is for them and
 // how to send message to another process
 #define QUEUE_ID_NODE(id) (id)
-#define QUEUE_ID_EXEC (16)
-#define QUEUE_ID_SHUTDOWN (17)
-#define QUEUE_ID_SCHEDULER (-1)
+#define QUEUE_ID_EXEC (2)
+#define QUEUE_ID_SHUTDOWN (3)
+#define QUEUE_ID_SCHEDULER (1)
+
+#define N0      "4"
+#define N1      "5"
+#define N2      "6"
+#define N3      "7"
+#define N4      "8"
+#define N5      "9"
+#define N6      "10"
+#define N7      "11"
+#define N8      "12"
+#define N9      "13"
+#define N10     "14"
+#define N11     "15"
+#define N12     "16"
+#define N13     "17"
+#define N14     "18"
+#define N15     "19"
+
 
 typedef enum tf{False, True} boolean;
 

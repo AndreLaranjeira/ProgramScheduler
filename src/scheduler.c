@@ -97,27 +97,28 @@ int main(int argc, char **argv){
     selected_topology.init();
 
 
-//    // The following lines are just a test to node execution
-//    msg fwd_test;
-//    msg clb_test;
-//
-//    fwd_test.recipient = 0;
-//    fwd_test.data.type = KIND_PROGRAM;
-//    fwd_test.data.msg_body.data_prog.job = 0;
-//    fwd_test.data.msg_body.data_prog.argc = 1;
-//    strcpy(fwd_test.data.msg_body.data_prog.argv[0], "./dummy");
-//    msgsnd(msqid_nodes, &fwd_test, sizeof(msg), 0666);
-//
-//    for(int i=0; i<N_MAX_NODES; i++){
-//        if(nodes_pid[i] !=0){
-//            msgrcv(msqid_nodes, &clb_test, sizeof(msg), QUEUE_ID_SCHEDULER, 0666);
-//            printf("Job: %d\tReturn: %d\n", clb_test.data.msg_body.data_metrics.job, clb_test.data.msg_body.data_metrics.return_code);
-//        }
-//    }
-//
-//    fwd_test.data.type = KIND_CONTROL;
-//    fwd_test.data.msg_body.data_control.command_code = EXIT_EXECUTION;
-//    msgsnd(msqid_nodes, &fwd_test, sizeof(msg), 0666);
+    // The following lines are just a test to node execution
+    msg fwd_test;
+    msg clb_test;
+
+    fwd_test.recipient = 1;
+    fwd_test.data.type = KIND_PROGRAM;
+    fwd_test.data.msg_body.data_prog.job = 0;
+    fwd_test.data.msg_body.data_prog.argc = 1;
+    strcpy(fwd_test.data.msg_body.data_prog.argv[0], "./dummy");
+    if(msgsnd(msqid_nodes, &fwd_test, sizeof(fwd_test.data), 0) == -1)
+        printf("Deu errado!\n");
+
+    for(int i=0; i<N_MAX_NODES; i++){
+        if(nodes_pid[i] !=0){
+            msgrcv(msqid_nodes, &clb_test, sizeof(clb_test.data), QUEUE_ID_SCHEDULER, 0);
+            printf("Job: %d\tReturn: %d\n", clb_test.data.msg_body.data_metrics.job, clb_test.data.msg_body.data_metrics.return_code);
+        }
+    }
+
+    fwd_test.data.type = KIND_CONTROL;
+    fwd_test.data.msg_body.data_control.command_code = EXIT_EXECUTION;
+    msgsnd(msqid_nodes, &fwd_test, sizeof(fwd_test.data), 0);
 
     // TODO - implementar o shutdown e o wait, abaixo segue um placeholder
 

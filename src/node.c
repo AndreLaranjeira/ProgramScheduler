@@ -23,7 +23,7 @@ int main(int argc, char **argv){
         exit(COUNT_ARGS);
     }
 
-    msq_id = msgget(QUEUE_NODES, 0666);                                    // Getting the scheduler IPC message queue
+    msq_id = msgget(QUEUE_NODES, 0x1FF);                                    // Getting the scheduler IPC message queue
 
     if(msq_id < 0){
         error(CONTEXT,
@@ -56,7 +56,8 @@ int main(int argc, char **argv){
     signal(SIGTERM, handle_terminate);                                      // Before starting, bind the SIGTERM signal. Scheduler may used this when topology is violated
 
     while(proceed == True){                                                 // Now, node is ready to run. 'Infinity loop' starts
-        msgrcv(msq_id, &queue_listening, sizeof(msg), node_id, 0666);       // Blocked system call. Listening to the message queue
+        msgrcv(msq_id, &queue_listening, sizeof(queue_listening.data), node_id, 0);          // Blocked system call. Listening to the message queue
+        printf("Chegou o correio para o no: %d\n", node_id);
         if(queue_listening.data.type == KIND_PROGRAM)                       // Decoding the received message type
             proceed = handle_program(&queue_listening);                     // Handles a message to execute a program
         else if(queue_listening.data.type == KIND_METRICS)
@@ -90,7 +91,7 @@ int handle_program(msg *request){                                       // Handl
     if(request->data.msg_body.data_prog.job > last_init_job){               // Eliminating duplicates by executing just higher job IDs
         for(int i = 1; i <= adjacent_nodes[0]; i++){                        // Broadcast execution message to neighbors
             request->recipient = adjacent_nodes[i];
-            msgsnd(msq_id, request, sizeof(msg), 0666);
+            msgsnd(msq_id, request, sizeof(request->data), 0);
         }
 
         last_init_job = request->data.msg_body.data_prog.job;               // Updating running job ID (this implies that we're accepting only higher IDs)
@@ -110,7 +111,7 @@ int handle_program(msg *request){                                       // Handl
             metrics.data.msg_body.data_metrics.return_code = ret_state;                         // Stores the return code
 
             metrics.recipient = adjacent_nodes[1];                                              // Send the message to the lower node
-            msgsnd(msq_id, &metrics, sizeof(msg), 0666);                                        // Here I'm assuming that the scheduler ID is always lower than any node
+            msgsnd(msq_id, &metrics, sizeof(metrics.data), 0);                                           // Here I'm assuming that the scheduler ID is always lower than any node
 
         }
         else {
@@ -125,7 +126,7 @@ int handle_program(msg *request){                                       // Handl
 int handle_metrics(msg *request){
     if(request->data.msg_body.data_metrics.job >= last_init_job){           // last_init_job variable is updated at handle_program function
         request->recipient = adjacent_nodes[1];                             // Gets the lower neighbor ID
-        msgsnd(msq_id, &request, sizeof(msg), 0666);                        // Here I'm assuming that the scheduler ID is always lower than any node
+        msgsnd(msq_id, &request, sizeof(request->data), 0);                           // Here I'm assuming that the scheduler ID is always lower than any node
     }
     return True;                                                            // Return clause possible of expansion in future
 }
@@ -136,7 +137,7 @@ int handle_commands(msg *request){                                          // D
         case EXIT_EXECUTION:                                                // Exit command = set return to false. (Break the outer loop in calling function)
             for(int i = 1; i <= adjacent_nodes[0]; i++){                    // Broadcast death message to neighbors
                 request->recipient = adjacent_nodes[i];
-                msgsnd(msq_id, request, sizeof(msg), 0666);
+                msgsnd(msq_id, request, sizeof(request->data), 0);
             }
             answer = SUCCESS;                                               // Now, you can rest in peace
             break;
