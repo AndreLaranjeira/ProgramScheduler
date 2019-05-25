@@ -2,6 +2,7 @@
 #define PROGRAMSCHEDULER_NODE_H
 
 // Compiler includes:
+#include <errno.h>                                                      /*TODO: remove debug printing*/
 #include <stdlib.h>
 #include <sys/ipc.h>
 #include <sys/msg.h>
@@ -12,9 +13,9 @@
 #include "data_structures.h"
 
 void handle_terminate();
-int handle_program(msg *request);
-int handle_metrics(msg *request);
-int handle_commands(msg *request);
+int handle_program(msg request);
+int handle_metrics(msg request);
+int handle_commands(msg request);
 
 
 

@@ -106,19 +106,17 @@ int main(int argc, char **argv){
     fwd_test.data.msg_body.data_prog.job = 1;
     fwd_test.data.msg_body.data_prog.argc = 1;
     strcpy(fwd_test.data.msg_body.data_prog.argv[0], "./dummy");
+    *fwd_test.data.msg_body.data_prog.argv[1] = (char) 0;
     msgsnd(msqid_nodes, &fwd_test, sizeof(fwd_test.data), 0);
 
     for(int i=0; i<N_MAX_NODES; i++){
-        if(nodes_pid[i] !=0){
+        if(nodes_pid[i] != 0){
             msgrcv(msqid_nodes, &clb_test, sizeof(clb_test.data), QUEUE_ID_SCHEDULER, 0);
-            printf("Job: %d\tReturn: %d\n", clb_test.data.msg_body.data_metrics.job, clb_test.data.msg_body.data_metrics.return_code);
+            printf("Scheduler received metric no %d= Job: %d\tReturn: %d\n", i, clb_test.data.msg_body.data_metrics.job, clb_test.data.msg_body.data_metrics.return_code); /*TODO: remove debug printing*/
         }
     }
 
-    fwd_test.data.type = KIND_CONTROL;
-    fwd_test.data.msg_body.data_control.command_code = EXIT_EXECUTION;
-    msgsnd(msqid_nodes, &fwd_test, sizeof(fwd_test.data), 0);
-
+    printf("Scheduler travado no wait\n");  /*TODO: remove debug printing*/
     // TODO - implementar o shutdown e o wait, abaixo segue um placeholder
 
     for(int i=0; i<N_MAX_NODES; i++){

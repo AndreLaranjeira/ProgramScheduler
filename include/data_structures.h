@@ -10,7 +10,7 @@
 
 // Define message parameters
 #define MAX_ARGS        20
-#define MAX_ARG_LEN     26
+#define MAX_ARG_LEN     20
 
 // Define processes message IDs
 // This helps processes to know which message is for them and
