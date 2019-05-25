@@ -178,8 +178,6 @@ int main(int argc, char **argv){
                 exit(returned_code);
             }
         }
-        actual_job = -1;
-        occupied_nodes = 0;
     }
 
     // TODO: process and print metrics here
