@@ -99,16 +99,11 @@ int handle_program(msg *request){                                       // Handl
         pid = fork();                                                       // Forking a new process
 
         if(pid == 0){                                                       // Child process will load the new executable, via execvp
-            execvp(request->data.msg_body.data_prog.argv[0],
-                   (char* const*) request->data.msg_body.data_prog.argv);   // execvp(full_path_of_executable, argv); argv[0] = full_path_of_executable
+            execvp(request->data.msg_body.data_prog.argv[0], request->data.msg_body.data_prog.argv);   // execvp(full_path_of_executable, argv); argv[0] = full_path_of_executable
 
-            for (int i = 0; i < request->data.msg_body.data_prog.argc; ++i) {
-                printf("Argv[%d]: %s\n", i, request->data.msg_body.data_prog.argv[i]);
-            }
-
-            error(NULL, "[Node %d]: Node could not start required executable. Exiting with %d code...\n", node_id, EXEC_FAILED);
+            error(NULL, "[Node %d]: Node could not start required executable. Exiting with error code %d...\n", node_id,
+                    EXEC_FAILED);
             exit(EXEC_FAILED);
-
         }
         else if (pid > 0) {                                                                     // Father process will start holding new metrics
             metrics.data.msg_body.data_metrics.job = last_init_job;                             // ID of the running job
@@ -120,9 +115,7 @@ int handle_program(msg *request){                                       // Handl
             metrics.data.msg_body.data_metrics.return_code = ret_state;                         // Stores the return code
 
             metrics.recipient = adjacent_nodes[1];                                              // Send the message to the lower node
-            if(msgsnd(msq_id, &metrics, sizeof(metrics.data), 0) == -1) {                                           // Here I'm assuming that the scheduler ID is always lower than any node
-                printf("Não voltou a metrica\n");
-            }
+            msgsnd(msq_id, &metrics, sizeof(metrics.data), 0);
         }
         else {
             error(NULL, "[Node %d]: Could not fork a new process. Shutting down...\n", node_id);                    // Fork process error

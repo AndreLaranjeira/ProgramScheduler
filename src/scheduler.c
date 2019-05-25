@@ -254,21 +254,21 @@ int init_torus_topology(){
 int init_tree_topology(){
     int n_nodes = 15;
     char *const topology[N_MAX_NODES][N_MAX_PARAMS] = {
-            {NODE_PROGRAM,N0, SCHEDULER, N1,N2,"","", END_PARAMS},
-            {NODE_PROGRAM,N1, N0,N3,N4,"", END_PARAMS},
-            {NODE_PROGRAM,N2, N0,N5,N6,"", END_PARAMS},
-            {NODE_PROGRAM,N3, N2,N7,N8,"", END_PARAMS},
-            {NODE_PROGRAM,N4, N2,N9,N10,"", END_PARAMS},
-            {NODE_PROGRAM,N5, N2,N11,N12,"", END_PARAMS},
-            {NODE_PROGRAM,N6, N2,N13,N14,"", END_PARAMS},
-            {NODE_PROGRAM,N7, N3,"","","", END_PARAMS},
-            {NODE_PROGRAM,N8, N3,"","","", END_PARAMS},
-            {NODE_PROGRAM,N9, N4,"","","", END_PARAMS},
-            {NODE_PROGRAM,N10, N4,"","","", END_PARAMS},
-            {NODE_PROGRAM,N11, N5,"","","", END_PARAMS},
-            {NODE_PROGRAM,N12, N5,"","","", END_PARAMS},
-            {NODE_PROGRAM,N13, N6,"","","", END_PARAMS},
-            {NODE_PROGRAM,N14, N6,"","","", END_PARAMS},
+            {NODE_PROGRAM,N0, SCHEDULER, N1,N2, END_PARAMS},
+            {NODE_PROGRAM,N1, N0,N3,N4, END_PARAMS},
+            {NODE_PROGRAM,N2, N0,N5,N6, END_PARAMS},
+            {NODE_PROGRAM,N3, N2,N7,N8, END_PARAMS},
+            {NODE_PROGRAM,N4, N2,N9,N10, END_PARAMS},
+            {NODE_PROGRAM,N5, N2,N11,N12, END_PARAMS},
+            {NODE_PROGRAM,N6, N2,N13,N14, END_PARAMS},
+            {NODE_PROGRAM,N7, N3, END_PARAMS},
+            {NODE_PROGRAM,N8, N3, END_PARAMS},
+            {NODE_PROGRAM,N9, N4, END_PARAMS},
+            {NODE_PROGRAM,N10, N4, END_PARAMS},
+            {NODE_PROGRAM,N11, N5, END_PARAMS},
+            {NODE_PROGRAM,N12, N5, END_PARAMS},
+            {NODE_PROGRAM,N13, N6, END_PARAMS},
+            {NODE_PROGRAM,N14, N6, END_PARAMS},
             //{Program name, id_node, neighbors, end of params}
     };
 
