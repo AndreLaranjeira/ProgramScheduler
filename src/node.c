@@ -74,9 +74,6 @@ int main(int argc, char **argv){
         else if(queue_listening.data.type == KIND_METRICS)
             // Handles a message to return a program metrics
             proceed = handle_metrics(queue_listening);
-        else if(queue_listening.data.type == KIND_CONTROL)
-            // Handles a message having any commands
-            proceed = handle_commands(queue_listening);
         else {
             // Received a unknown .type code
             error(NULL, "[Node %d]: Unknown operation %d received. Aborting...\n", node_id-4, queue_listening.data.type);
@@ -137,9 +134,10 @@ int handle_program(msg request){
 
         // Child process will load the new executable, via execvp
         if(pid == 0){
+            char argv[MAX_ARGS][MAX_ARG_LEN] = {{"./dummy"}, {(char) NULL}};
             /*TODO: Fix the execvp system call*/
             // execvp(full_path_of_executable, argv); argv[0] = full_path_of_executable
-            execl("./dummy", "./dummy", (char *) NULL);
+            execvp(argv[0], (char * const *) argv);
             printf("errno: %d\n", errno);                                                                               /* TODO: remove debug printing */
             error(NULL, "[Node %d]: Node could not start required executable. Exiting with error code %d...\n", node_id-4,
                     EXEC_FAILED);
@@ -194,32 +192,4 @@ int handle_metrics(msg request){
     }
     // Return clause possible of expansion in future
     return True;
-}
-
-// Handles a command message
-int handle_commands(msg request){
-    // In the beginning, we expect to continue execution
-    int answer = True;
-
-    // Switch between commands
-    switch(request.data.msg_body.data_control.command_code){
-        // Exit command = set return to false. (Break the outer loop in calling function)
-        case EXIT_EXECUTION:
-            // Broadcast death message to neighbors
-            for(int i = 1; i <= adjacent_nodes[0]; i++){
-                request.recipient = adjacent_nodes[i];
-                if(msgsnd(msq_id, &request, sizeof(request.data), 0) == 0)
-                    printf("No %d broadcast de parada para o nó %d\n", node_id-4, adjacent_nodes[i]-4);                 /* TODO: remove debug printing */
-                else
-                    printf("No %d falhou no broadcast de parada\n", node_id-4);
-            }
-            // Now, you can rest in peace
-            answer = SUCCESS;
-            break;
-        default:
-            // Unknown command code, just ignore the message
-            warning(NULL, "[Node %d]: An unknown command was just ignored.\n", node_id);
-            break;
-    }
-    return answer;
 }
