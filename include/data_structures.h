@@ -105,11 +105,13 @@ typedef struct message {
 
 //Scheduler table
 typedef struct item {
-  int32_t job;
-  time_t start_time;
+  int32_t job, node_job, metrics_idx;
+  msg_data_metrics metrics[16];
+  boolean done;
+  struct item *next;
+  time_t start_time, actual_start_time;
   int argc;
   char argv[DATA_PROGRAM_MAX_ARG_NUM][DATA_PROGRAM_MAX_ARG_LEN];
-  struct item *next;
 } table_item;
 
 
@@ -124,8 +126,6 @@ typedef struct table{
 
 return_codes create_table(scheduler_table **table);
 return_codes add_table_item(scheduler_table *table, table_item item);
-// return_codes remove_table_item(scheduler_table *table, int32_t job);
 return_codes delete_table(scheduler_table **table);
-// return_codes _table_item(table_item item);
 
 #endif /*DATA_STRUCTURES_H_*/
