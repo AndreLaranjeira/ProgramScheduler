@@ -17,7 +17,7 @@
 #define QUEUE_ID_NODE(id) (id)
 #define QUEUE_ID_EXEC (16)
 #define QUEUE_ID_SHUTDOWN (17)
-#define QUEUE_ID_SCHEDULER (-1)
+#define QUEUE_ID_SCHEDULER (18)
 
 // Fixed argument number and length for the msg_data_program data type:
 #define DATA_PROGRAM_MAX_ARG_NUM 10

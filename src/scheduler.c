@@ -75,7 +75,8 @@ int main(int argc, char **argv){
     int msqid_top_level, msqid_nodes;
     msg shutdown_info, received;
     msg_kind kind;
-    return_codes status;
+    return_codes returned_code;
+    int status;
     topology topology_options[] = {{"hypercube", &init_hypercube_topology},
                                    {"torus", &init_torus_topology},
                                    {"tree", &init_tree_topology}};
@@ -141,9 +142,9 @@ int main(int argc, char **argv){
     selected_topology.init();
 
     // Initialize process table for scaling
-    if ((status=create_table(&process_table)) != SUCCESS) {
+    if ((returned_code=create_table(&process_table)) != SUCCESS) {
         error(CONTEXT, "Could not create process table.\n");
-        exit(status);
+        exit(returned_code);
     }
 
 
@@ -153,20 +154,28 @@ int main(int argc, char **argv){
         // Check for messages from exec
         kind = get_message(msqid_top_level, &received);
         if (kind != KIND_ERROR){
-            status = treat_message(received, kind);
+            returned_code = treat_message(received, kind);
+            if ( returned_code != SUCCESS ){
+                error(CONTEXT, "Couldn't treat a message.\n");
+                exit(returned_code);
+            }
         }
         // Check for messages from node 0
         kind = get_message(msqid_nodes, &received);
         if (kind != KIND_ERROR){
-            status = treat_message(received, kind);
+            returned_code = treat_message(received, kind);
+            if ( returned_code != SUCCESS ){
+                error(CONTEXT, "Couldn't treat a message.\n");
+                exit(returned_code);
+            }
         }
         // Scales jobs
         if (is_a_job_ready() && is_no_job_executing()) {
-            status = execute_next_job(msqid_nodes);
-            if ( status != SUCCESS ) {
+            returned_code = execute_next_job(msqid_nodes);
+            if ( returned_code != SUCCESS ) {
                 error(CONTEXT,
                 "Couldn't execute a job when it was supposed to be possible.\n");
-                exit(status);
+                exit(returned_code);
             }
         }
         actual_job = -1;
@@ -176,9 +185,9 @@ int main(int argc, char **argv){
     // TODO: process and print metrics here
 
     // Delete process table
-    if ((status=delete_table(&process_table)) != SUCCESS) {
+    if ((returned_code=delete_table(&process_table)) != SUCCESS) {
         error(CONTEXT, "Could not delete process table.\n");
-        exit(status);
+        exit(returned_code);
     }
     // TODO - implementar o shutdown e o wait, abaixo segue um placeholder
 
