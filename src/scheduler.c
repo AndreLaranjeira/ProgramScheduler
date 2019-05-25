@@ -131,6 +131,7 @@ int main(int argc, char **argv){
         exit(status);
     }
 
+
     // Main loop
     while(!received_shutdown) {
 
@@ -146,12 +147,15 @@ int main(int argc, char **argv){
         }
         // Scales jobs
         if (is_a_job_ready() && is_no_job_executing()) {
-            if ( (status = execute_next_job(msqid_nodes)) != SUCCESS ) {
+            status = execute_next_job(msqid_nodes);
+            if ( status != SUCCESS ) {
                 error(CONTEXT,
                 "Couldn't execute a job when it was supposed to be possible.\n");
                 exit(status);
             }
         }
+        actual_job = -1;
+        occupied_nodes = 0;
     }
 
     // TODO: process and print metrics here
@@ -245,7 +249,7 @@ void destroy_msq_nodes(int msqid_nodes){
 
 boolean is_a_job_ready()
 {
-    return time(NULL) > process_table->next->start_time;
+    return process_table != NULL && process_table->next != NULL && time(NULL) > process_table->next->start_time;
 }
 
 boolean is_no_job_executing()
@@ -274,6 +278,8 @@ return_codes execute_next_job(int msqid)
     msg to_send;
     int i;
 
+    // printf("Executando job %d\n", process_table->next->job);
+
     /* Gravo valores de controle */
     process_table->next->done = True;
     process_table->next->actual_start_time = time(NULL);
@@ -297,6 +303,12 @@ return_codes execute_next_job(int msqid)
     /* Envio a mensagem para a fila de mensagens de nó */
     msgsnd(msqid, &to_send, sizeof(to_send.data), 0);
 
+    /* Atualizo qual o próximo */
+    process_table->next = process_table->first;
+    while(process_table->next != NULL && process_table->next->done) {
+      process_table->next = process_table->next->next;
+    }
+
     return SUCCESS;
 }
 
@@ -312,6 +324,8 @@ return_codes add_table(msg_data received)
     }
     item.start_time = time(NULL) + (time_t)extracted.delay;
     add_table_item(process_table, item);
+
+    // print_table(process_table);
 
     return SUCCESS;
 }
@@ -347,4 +361,5 @@ return_codes treat_message(msg received, msg_kind kind)
 
 void shutdown() {
     info(CONTEXT, "Shutdown signal received! Shutting down scheduler...\n");
+    received_shutdown = True;
 }

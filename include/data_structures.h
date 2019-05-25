@@ -14,10 +14,10 @@
 // Define processes message IDs
 // This helps processes to know which message is for them and
 // how to send message to another process
-#define QUEUE_ID_NODE(id) (id)
-#define QUEUE_ID_EXEC (16)
-#define QUEUE_ID_SHUTDOWN (17)
-#define QUEUE_ID_SCHEDULER (18)
+#define QUEUE_ID_NODE(id) ((id)+1)
+#define QUEUE_ID_EXEC (17)
+#define QUEUE_ID_SHUTDOWN (18)
+#define QUEUE_ID_SCHEDULER (19)
 
 // Fixed argument number and length for the msg_data_program data type:
 #define DATA_PROGRAM_MAX_ARG_NUM 10
@@ -127,5 +127,6 @@ typedef struct table{
 return_codes create_table(scheduler_table **table);
 return_codes add_table_item(scheduler_table *table, table_item item);
 return_codes delete_table(scheduler_table **table);
+void print_table(scheduler_table *table);
 
 #endif /*DATA_STRUCTURES_H_*/

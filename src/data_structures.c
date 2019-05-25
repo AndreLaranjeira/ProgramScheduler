@@ -3,6 +3,7 @@
 #include "data_structures.h"
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 
 return_codes create_table(scheduler_table **table)
 {
@@ -51,11 +52,6 @@ return_codes add_table_item(scheduler_table *table, table_item item)
     table->count = 1;
     table->next_alarm = aux->start_time;
   } else {
-    aux = table->first;
-    while(aux->next != NULL && aux->next->start_time <= item.start_time){
-      aux = aux->next;
-    }
-
     aux2 = (table_item*) malloc(sizeof(table_item));
     if (aux2 == NULL){
       return ALLOC_ERROR;
@@ -68,12 +64,23 @@ return_codes add_table_item(scheduler_table *table, table_item item)
     for(i = 0; i < DATA_PROGRAM_MAX_ARG_NUM; i++){
       strcpy(aux2->argv[i], item.argv[i]);
     }
-    aux2->next = aux->next;
-    if (aux == table->last){
-      table->last = aux2;
-    }
 
-    aux->next = aux2;
+    if(item.start_time < table->first->start_time) {
+      aux2->next = table->first;
+      table->first = aux2;
+    } else {
+      aux = table->first;
+      while(aux->next != NULL && aux->next->start_time < item.start_time){
+        aux = aux->next;
+      }
+
+      aux2->next = aux->next;
+      if (aux == table->last){
+        table->last = aux2;
+      }
+
+      aux->next = aux2;
+    }
     table->count++;
 
     /* Finds the next task to be executed on the top */
@@ -101,4 +108,17 @@ return_codes delete_table(scheduler_table **table)
   }
   free(*table);
   return SUCCESS;
+}
+
+void print_table(scheduler_table *table)
+{
+  table_item *aux;
+  aux = table->first;
+  printf("TABLE:\n");
+  while(aux != NULL) {
+    printf("Job: %d | ", aux->job);
+    printf("Start time: %s", ctime(&(aux->start_time)));
+    aux = aux->next;
+  }
+  printf("\n");
 }
