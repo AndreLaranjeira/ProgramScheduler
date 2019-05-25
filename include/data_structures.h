@@ -14,10 +14,10 @@
 // Define processes message IDs
 // This helps processes to know which message is for them and
 // how to send message to another process
-#define QUEUE_ID_NODE(id) ((id)+1)
-#define QUEUE_ID_EXEC (17)
-#define QUEUE_ID_SHUTDOWN (18)
-#define QUEUE_ID_SCHEDULER (19)
+#define QUEUE_ID_NODE(id) (id)
+#define QUEUE_ID_EXEC (16)
+#define QUEUE_ID_SHUTDOWN (17)
+#define QUEUE_ID_SCHEDULER (-1)
 
 // Fixed argument number and length for the msg_data_program data type:
 #define DATA_PROGRAM_MAX_ARG_NUM 10
@@ -37,6 +37,7 @@ typedef enum returns{
     IPC_MSG_QUEUE_SEND,
     IPC_MSG_QUEUE_RECEIVE,
     IPC_MSG_QUEUE_RMID,
+    EXEC_FAILED,
     SCHEDULER_DOWN,
     FORK_ERROR,
     UNKNOWN_ERROR
