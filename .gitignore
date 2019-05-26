@@ -18,6 +18,7 @@ node
 scheduler
 shutdown
 tests
+dummy
 
 # Object files:
 *.o

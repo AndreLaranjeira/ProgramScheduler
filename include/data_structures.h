@@ -14,10 +14,28 @@
 // Define processes message IDs
 // This helps processes to know which message is for them and
 // how to send message to another process
-#define QUEUE_ID_NODE(id) (id)
-#define QUEUE_ID_EXEC (16)
-#define QUEUE_ID_SHUTDOWN (17)
-#define QUEUE_ID_SCHEDULER (18)
+#define QUEUE_ID_NODE(id) ((id)+4)
+#define QUEUE_ID_EXEC (2)
+#define QUEUE_ID_SHUTDOWN (3)
+#define QUEUE_ID_SCHEDULER (1)
+
+#define SCHEDULER "1"
+#define N0      "4"
+#define N1      "5"
+#define N2      "6"
+#define N3      "7"
+#define N4      "8"
+#define N5      "9"
+#define N6      "10"
+#define N7      "11"
+#define N8      "12"
+#define N9      "13"
+#define N10     "14"
+#define N11     "15"
+#define N12     "16"
+#define N13     "17"
+#define N14     "18"
+#define N15     "19"
 
 // Fixed argument number and length for the msg_data_program data type:
 #define DATA_PROGRAM_MAX_ARG_NUM 10
@@ -25,8 +43,8 @@
 
 typedef enum tf{False, True} boolean;
 
-// Standardization of all error codes
-// As the project increments, please add the new error codes to
+// Standardization of all error codes.
+// As the project increments, please add the new error codes here.
 typedef enum returns{
     SUCCESS,
     COUNT_ARGS,
@@ -37,9 +55,10 @@ typedef enum returns{
     IPC_MSG_QUEUE_SEND,
     IPC_MSG_QUEUE_RECEIVE,
     IPC_MSG_QUEUE_RMID,
-    EXEC_FAILED,
     SCHEDULER_DOWN,
     FORK_ERROR,
+    EXEC_FAILED,
+    ABORT_RECEIVED,
     UNKNOWN_ERROR
 }return_codes;
 
@@ -68,7 +87,7 @@ typedef struct message_data_metrics {
 
 // Data needed to control (others can be added)
 typedef struct message_data_control {
-    int command_code;
+    command_codes command_code;
 } msg_data_control;
 
 // Data informing a process PID:

@@ -279,22 +279,22 @@ int init_hypercube_topology(){
     int n_nodes = 16;
     quant_nodes = n_nodes;
     char *const topology[N_MAX_NODES][N_MAX_PARAMS] = {
-            {NODE_PROGRAM,"0", "-1", "1","2","4","8", END_PARAMS},
-            {NODE_PROGRAM,"1", "0","3","5","9", END_PARAMS},
-            {NODE_PROGRAM,"2", "0","3","6","10", END_PARAMS},
-            {NODE_PROGRAM,"3", "1","2","7","11", END_PARAMS},
-            {NODE_PROGRAM,"4", "0","5","6","12", END_PARAMS},
-            {NODE_PROGRAM,"5", "1","4","7","13", END_PARAMS},
-            {NODE_PROGRAM,"6", "2","4","7","14", END_PARAMS},
-            {NODE_PROGRAM,"7", "3","5","6","15", END_PARAMS},
-            {NODE_PROGRAM,"8", "0","9","10","12", END_PARAMS},
-            {NODE_PROGRAM,"9", "1","8","11","13", END_PARAMS},
-            {NODE_PROGRAM,"10", "2","8","11","14", END_PARAMS},
-            {NODE_PROGRAM,"11", "4","9","10","15", END_PARAMS},
-            {NODE_PROGRAM,"12", "4","8","13","14", END_PARAMS},
-            {NODE_PROGRAM,"13", "5","9","12","15", END_PARAMS},
-            {NODE_PROGRAM,"14", "6","10","12","15", END_PARAMS},
-            {NODE_PROGRAM,"15", "7","11","13","14", END_PARAMS}
+            {NODE_PROGRAM,N0, SCHEDULER, N1,N2,N4,N8, END_PARAMS},
+            {NODE_PROGRAM,N1, N0,N3,N5,N9, END_PARAMS},
+            {NODE_PROGRAM,N2, N0,N3,N6,N10, END_PARAMS},
+            {NODE_PROGRAM,N3, N1,N2,N7,N11, END_PARAMS},
+            {NODE_PROGRAM,N4, N0,N5,N6,N12, END_PARAMS},
+            {NODE_PROGRAM,N5, N1,N4,N7,N13, END_PARAMS},
+            {NODE_PROGRAM,N6, N2,N4,N7,N14, END_PARAMS},
+            {NODE_PROGRAM,N7, N3,N5,N6,N15, END_PARAMS},
+            {NODE_PROGRAM,N8, N0,N9,N10,N12, END_PARAMS},
+            {NODE_PROGRAM,N9, N1,N8,N11,N13, END_PARAMS},
+            {NODE_PROGRAM,N10, N2,N8,N11,N14, END_PARAMS},
+            {NODE_PROGRAM,N11, N3,N9,N10,N15, END_PARAMS},
+            {NODE_PROGRAM,N12, N4,N8,N13,N14, END_PARAMS},
+            {NODE_PROGRAM,N13, N5,N9,N12,N15, END_PARAMS},
+            {NODE_PROGRAM,N14, N6,N10,N12,N15, END_PARAMS},
+            {NODE_PROGRAM,N15, N7,N11,N13,N14, END_PARAMS}
             //{Program name, id_node, neighbors, end of params}
     };
 
@@ -308,22 +308,22 @@ int init_torus_topology(){
     int n_nodes = 16;
     quant_nodes = n_nodes;
     char *const topology[N_MAX_NODES][N_MAX_PARAMS] = {
-            {NODE_PROGRAM,"0", "-1", "1","3","4","12", END_PARAMS},
-            {NODE_PROGRAM,"1", "0","2","5","13", END_PARAMS},
-            {NODE_PROGRAM,"2", "1","3","6","14", END_PARAMS},
-            {NODE_PROGRAM,"3", "0","2","7","15", END_PARAMS},
-            {NODE_PROGRAM,"4", "0","5","7","8", END_PARAMS},
-            {NODE_PROGRAM,"5", "1","4","6","9", END_PARAMS},
-            {NODE_PROGRAM,"6", "2","5","5","10", END_PARAMS},
-            {NODE_PROGRAM,"7", "3","4","6","11", END_PARAMS},
-            {NODE_PROGRAM,"8", "4","9","11","12", END_PARAMS},
-            {NODE_PROGRAM,"9", "5","8","10","13", END_PARAMS},
-            {NODE_PROGRAM,"10", "6","9","11","14", END_PARAMS},
-            {NODE_PROGRAM,"11", "7","8","10","15", END_PARAMS},
-            {NODE_PROGRAM,"12", "0","8","13","15", END_PARAMS},
-            {NODE_PROGRAM,"13", "1","9","12","14", END_PARAMS},
-            {NODE_PROGRAM,"14", "2","10","13","15", END_PARAMS},
-            {NODE_PROGRAM,"15", "3","11","12","14", END_PARAMS}
+            {NODE_PROGRAM,N0, SCHEDULER, N1,N3,N4,N12, END_PARAMS},
+            {NODE_PROGRAM,N1, N0,N2,N5,N13, END_PARAMS},
+            {NODE_PROGRAM,N2, N1,N3,N6,N14, END_PARAMS},
+            {NODE_PROGRAM,N3, N0,N2,N7,N15, END_PARAMS},
+            {NODE_PROGRAM,N4, N0,N5,N7,N8, END_PARAMS},
+            {NODE_PROGRAM,N5, N1,N4,N6,N9, END_PARAMS},
+            {NODE_PROGRAM,N6, N2,N5,N7,N10, END_PARAMS},
+            {NODE_PROGRAM,N7, N3,N4,N6,N11, END_PARAMS},
+            {NODE_PROGRAM,N8, N4,N9,N11,N12, END_PARAMS},
+            {NODE_PROGRAM,N9, N5,N8,N10,N13, END_PARAMS},
+            {NODE_PROGRAM,N10, N6,N9,N11,N14, END_PARAMS},
+            {NODE_PROGRAM,N11, N7,N8,N10,N15, END_PARAMS},
+            {NODE_PROGRAM,N12, N0,N8,N13,N15, END_PARAMS},
+            {NODE_PROGRAM,N13, N1,N9,N12,N14, END_PARAMS},
+            {NODE_PROGRAM,N14, N2,N10,N13,N15, END_PARAMS},
+            {NODE_PROGRAM,N15, N3,N11,N12,N14, END_PARAMS}
             //{Program name, id_node, neighbors, end of params}
     };
 
@@ -337,21 +337,21 @@ int init_tree_topology(){
     int n_nodes = 15;
     quant_nodes = n_nodes;
     char *const topology[N_MAX_NODES][N_MAX_PARAMS] = {
-            {NODE_PROGRAM,"0", "-1", "1","2","","", END_PARAMS},
-            {NODE_PROGRAM,"1", "0","3","4","", END_PARAMS},
-            {NODE_PROGRAM,"2", "0","5","6","", END_PARAMS},
-            {NODE_PROGRAM,"3", "2","7","8","", END_PARAMS},
-            {NODE_PROGRAM,"4", "2","9","10","", END_PARAMS},
-            {NODE_PROGRAM,"5", "2","11","12","", END_PARAMS},
-            {NODE_PROGRAM,"6", "2","13","14","", END_PARAMS},
-            {NODE_PROGRAM,"7", "3","","","", END_PARAMS},
-            {NODE_PROGRAM,"8", "3","","","", END_PARAMS},
-            {NODE_PROGRAM,"9", "4","","","", END_PARAMS},
-            {NODE_PROGRAM,"10", "4","","","", END_PARAMS},
-            {NODE_PROGRAM,"11", "5","","","", END_PARAMS},
-            {NODE_PROGRAM,"12", "5","","","", END_PARAMS},
-            {NODE_PROGRAM,"13", "6","","","", END_PARAMS},
-            {NODE_PROGRAM,"14", "6","","","", END_PARAMS},
+            {NODE_PROGRAM,N0, SCHEDULER, N1,N2, END_PARAMS},
+            {NODE_PROGRAM,N1, N0,N3,N4, END_PARAMS},
+            {NODE_PROGRAM,N2, N0,N5,N6, END_PARAMS},
+            {NODE_PROGRAM,N3, N1,N7,N8, END_PARAMS},
+            {NODE_PROGRAM,N4, N1,N9,N10, END_PARAMS},
+            {NODE_PROGRAM,N5, N2,N11,N12, END_PARAMS},
+            {NODE_PROGRAM,N6, N2,N13,N14, END_PARAMS},
+            {NODE_PROGRAM,N7, N3, END_PARAMS},
+            {NODE_PROGRAM,N8, N3, END_PARAMS},
+            {NODE_PROGRAM,N9, N4, END_PARAMS},
+            {NODE_PROGRAM,N10, N4, END_PARAMS},
+            {NODE_PROGRAM,N11, N5, END_PARAMS},
+            {NODE_PROGRAM,N12, N5, END_PARAMS},
+            {NODE_PROGRAM,N13, N6, END_PARAMS},
+            {NODE_PROGRAM,N14, N6, END_PARAMS},
             //{Program name, id_node, neighbors, end of params}
     };
 
