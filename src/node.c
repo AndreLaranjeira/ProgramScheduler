@@ -134,7 +134,12 @@ int handle_program(msg request){
 
         // Child process will load the new executable, via execvp
         if(pid == 0){
-            char argv[MAX_ARGS][MAX_ARG_LEN] = {{"./dummy"}, {(char) NULL}};
+            /* execvp receives an array of pointers */
+            char* argv[MAX_ARGS];
+            argv[0] = (char*) malloc(8*sizeof(char));
+            argv[1] = (char*) NULL;
+            strcpy(argv[0], "./dummy");
+
             /*TODO: Fix the execvp system call*/
             // execvp(full_path_of_executable, argv); argv[0] = full_path_of_executable
             execvp(argv[0], (char * const *) argv);

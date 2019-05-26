@@ -17,6 +17,7 @@ execute
 node
 scheduler
 shutdown
+dummy
 
 # Object files:
 *.o
