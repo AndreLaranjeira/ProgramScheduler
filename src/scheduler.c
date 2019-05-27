@@ -491,14 +491,15 @@ return_codes add_table(msg_data received)
     item.start_time = time(NULL) + (time_t)extracted.delay;
     add_table_item(process_table, item);
 
-    // print_table(process_table);
+    print_table(process_table);
 
     return SUCCESS;
 }
 
 return_codes save_metrics(msg_data received)
 {
-
+    info(CONTEXT, "Recebida métrica!");
+    printf("Do job %d\n", received.msg_body.data_metrics.job);
     return SUCCESS;
 }
 
@@ -512,10 +513,6 @@ return_codes treat_message(msg received, msg_kind kind)
 
     case KIND_METRICS:
         save_metrics(received.data);
-        break;
-
-    case KIND_CONTROL:
-        /* code */
         break;
 
     case KIND_PID:

@@ -38,8 +38,8 @@
 #define N15     "19"
 
 // Fixed argument number and length for the msg_data_program data type:
-#define DATA_PROGRAM_MAX_ARG_NUM 10
-#define DATA_PROGRAM_MAX_ARG_LEN 100
+#define DATA_PROGRAM_MAX_ARG_NUM 20
+#define DATA_PROGRAM_MAX_ARG_LEN 20
 
 typedef enum tf{False, True} boolean;
 
@@ -62,10 +62,6 @@ typedef enum returns{
     UNKNOWN_ERROR
 }return_codes;
 
-typedef enum commands{
-    EXIT_EXECUTION = 1
-}command_codes;
-
 // Renaming time measure struct type
 typedef struct tm time_measure;
 
@@ -85,11 +81,6 @@ typedef struct message_data_metrics {
     time_measure end_time; // When the node stopped running the program
 } msg_data_metrics;
 
-// Data needed to control (others can be added)
-typedef struct message_data_control {
-    command_codes command_code;
-} msg_data_control;
-
 // Data informing a process PID:
 typedef struct message_data_pid {
   long sender_id;   // Identify who sent the message.
@@ -101,7 +92,6 @@ typedef enum message_kind {
   KIND_ERROR,
   KIND_PROGRAM,
   KIND_METRICS,
-  KIND_CONTROL,
   KIND_PID
 }msg_kind;
 
@@ -112,7 +102,6 @@ typedef struct message_data {
   union message_body {
     msg_data_program data_prog; // For queueing and starting programs and
     msg_data_metrics data_metrics; // For sending metrics from the nodes to the scheduler
-    msg_data_control data_control; // For sending shutdowns and other signals needed
     msg_data_pid data_pid; // For sending a process' PID to another process.
   } msg_body;
 } msg_data;
