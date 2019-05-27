@@ -48,10 +48,9 @@ typedef enum tf{False, True} boolean;
 typedef enum returns{
     SUCCESS,
     COUNT_ARGS,
-
-    COUNT_ARGS = 1,
     INVALID_ARG,
     FILE_ERROR,
+    ALLOC_ERROR,
     IPC_MSG_QUEUE_CREAT,
     IPC_MSG_QUEUE_SEND,
     IPC_MSG_QUEUE_RECEIVE,
@@ -60,9 +59,12 @@ typedef enum returns{
     FORK_ERROR,
     EXEC_FAILED,
     ABORT_RECEIVED,
-    SCHEDULER_DOWN,
     UNKNOWN_ERROR
 }return_codes;
+
+typedef enum commands{
+    EXIT_EXECUTION = 1
+}command_codes;
 
 // Renaming time measure struct type
 typedef struct tm time_measure;
@@ -83,10 +85,9 @@ typedef struct message_data_metrics {
     time_measure end_time; // When the node stopped running the program
 } msg_data_metrics;
 
-// Data needed to control
+// Data needed to control (others can be added)
 typedef struct message_data_control {
-/* TODO: write fields */
-  int a; // Pra num dar erro
+    command_codes command_code;
 } msg_data_control;
 
 // Data informing a process PID:
@@ -121,5 +122,31 @@ typedef struct message {
     long recipient; // Use one of the IDs defined above here
     msg_data data; // The important stuff
 } msg;
+
+//Scheduler table
+typedef struct item {
+  int32_t job, node_job, metrics_idx;
+  msg_data_metrics metrics[16];
+  boolean done;
+  struct item *next;
+  time_t start_time, actual_start_time;
+  int argc;
+  char argv[DATA_PROGRAM_MAX_ARG_NUM][DATA_PROGRAM_MAX_ARG_LEN];
+} table_item;
+
+
+typedef struct table{
+  table_item *first;
+  table_item *last;
+  table_item *next;
+  time_t next_alarm;
+  int count;
+  int last_job;
+} scheduler_table;
+
+return_codes create_table(scheduler_table **table);
+return_codes add_table_item(scheduler_table *table, table_item item);
+return_codes delete_table(scheduler_table **table);
+void print_table(scheduler_table *table);
 
 #endif /*DATA_STRUCTURES_H_*/

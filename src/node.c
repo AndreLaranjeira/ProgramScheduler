@@ -6,6 +6,7 @@
 #define CONTEXT "Node"
 
 // Global variables
+char context[7];            // Used to print a node instance in runtime
 int node_id, msq_id;        // Node ID and IPC queue ID
 int *adjacent_nodes;        // Dinamically allocated array of integers to the adjacent nodes
 int last_init_job = 0;      // Holds the last run job ID
@@ -19,17 +20,15 @@ int main(int argc, char **argv){
 
     // Argument amount check
     if(argc < 2 || argc > 7){
-        error(CONTEXT,
-                "Invalid argument count\n");
+        error(CONTEXT, "Invalid argument count\n");
         exit(COUNT_ARGS);
     }
 
     // Getting the scheduler IPC message queue
-    msq_id = msgget(QUEUE_NODES, 0x1FF);
+    msq_id = msgget(QUEUE_NODES, 0666);
     // Checks if queue was created, if not, it's a sign that scheduler has never been ran
     if(msq_id < 0){
-        error(CONTEXT,
-                "Scheduler is not running. Stopping...\n");
+        error(CONTEXT, "Scheduler is not running. Stopping...\n");
         exit(SCHEDULER_DOWN);
     }
 
@@ -135,7 +134,7 @@ int handle_program(msg request){
         // Child process will load the new executable, via execvp
         if(pid == 0){
             /* execvp receives an array of pointers */
-            char* argv[MAX_ARGS];
+            char* argv[DATA_PROGRAM_MAX_ARG_NUM];
             argv[0] = (char*) malloc(8*sizeof(char));
             argv[1] = (char*) NULL;
             strcpy(argv[0], "./dummy");
