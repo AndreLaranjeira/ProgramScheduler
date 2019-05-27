@@ -50,6 +50,7 @@ typedef enum returns{
     COUNT_ARGS,
     INVALID_ARG,
     FILE_ERROR,
+    ALLOC_ERROR,
     IPC_MSG_QUEUE_CREAT,
     IPC_MSG_QUEUE_SEND,
     IPC_MSG_QUEUE_RECEIVE,
@@ -88,6 +89,7 @@ typedef struct message_data_pid {
 
 // Enumerate types of messages
 typedef enum message_kind {
+  KIND_ERROR,
   KIND_PROGRAM,
   KIND_METRICS,
   KIND_PID
@@ -109,5 +111,31 @@ typedef struct message {
     long recipient; // Use one of the IDs defined above here
     msg_data data; // The important stuff
 } msg;
+
+//Scheduler table
+typedef struct item {
+  int32_t job, node_job, metrics_idx;
+  msg_data_metrics metrics[16];
+  boolean done;
+  struct item *next;
+  time_t start_time, actual_start_time;
+  int argc;
+  char argv[DATA_PROGRAM_MAX_ARG_NUM][DATA_PROGRAM_MAX_ARG_LEN];
+} table_item;
+
+
+typedef struct table{
+  table_item *first;
+  table_item *last;
+  table_item *next;
+  time_t next_alarm;
+  int count;
+  int last_job;
+} scheduler_table;
+
+return_codes create_table(scheduler_table **table);
+return_codes add_table_item(scheduler_table *table, table_item item);
+return_codes delete_table(scheduler_table **table);
+void print_table(scheduler_table *table);
 
 #endif /*DATA_STRUCTURES_H_*/

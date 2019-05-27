@@ -35,6 +35,14 @@ int init_hypercube_topology();
 int init_torus_topology();
 int init_tree_topology();
 
+boolean is_a_job_ready();
+boolean is_no_job_executing();
+msg_kind get_message(int msqid, msg *message_received);
+return_codes execute_next_job(int msqid);
+return_codes add_table(msg_data received);
+return_codes save_metrics(msg_data received);
+return_codes treat_message(msg received, msg_kind kind);
+
 void panic_function();
 void set_panic_flag();
 void shutdown();
@@ -45,11 +53,15 @@ typedef struct topology_name_function{
     int (*init)();
 }topology;
 
-
 // Global Variables
 pid_t nodes_pid[N_MAX_NODES];
 int msqid_top_level, msqid_nodes;
 int panic_flag = 0;
+boolean received_shutdown = False;
+
+scheduler_table *process_table;
+int32_t actual_job = -1, last_node_job = 0;
+int occupied_nodes = 0, quant_nodes;
 
 // Signal usage:
 // SIGABRT: Sets a panic flag to 1. The panic_function will soon be called.
@@ -61,8 +73,10 @@ int main(int argc, char **argv){
 
     // Variables declaration:
     int msqid_top_level, msqid_nodes;
+    msg shutdown_info, received;
+    msg_kind kind;
+    return_codes returned_code;
     int status;
-    msg shutdown_info;
     topology topology_options[] = {{"hypercube", &init_hypercube_topology},
                                    {"torus", &init_torus_topology},
                                    {"tree", &init_tree_topology}};
@@ -127,26 +141,52 @@ int main(int argc, char **argv){
     // Call the topology initialization
     selected_topology.init();
 
+    // Initialize process table for scaling
+    if ((returned_code=create_table(&process_table)) != SUCCESS) {
+        error(CONTEXT, "Could not create process table.\n");
+        exit(returned_code);
+    }
 
-    // The following lines are just a test to node execution
-    msg fwd_test;
-    msg clb_test;
 
-    fwd_test.recipient = QUEUE_ID_NODE(0);
-    fwd_test.data.type = KIND_PROGRAM;
-    fwd_test.data.msg_body.data_prog.job = 1;
-    fwd_test.data.msg_body.data_prog.argc = 1;
-    strcpy(fwd_test.data.msg_body.data_prog.argv[0], "./dummy");
-    msgsnd(msqid_nodes, &fwd_test, sizeof(fwd_test.data), 0);
+    // Main loop
+    while(!received_shutdown) {
 
-    for(int i=0; i<N_MAX_NODES; i++){
-        if(nodes_pid[i] != 0){
-            msgrcv(msqid_nodes, &clb_test, sizeof(clb_test.data), QUEUE_ID_SCHEDULER, 0);
-            printf("Scheduler received metric no %d= Job: %d\tReturn: %d\n", i, clb_test.data.msg_body.data_metrics.job, clb_test.data.msg_body.data_metrics.return_code); /*TODO: remove debug printing*/
+        // Check for messages from exec
+        kind = get_message(msqid_top_level, &received);
+        if (kind != KIND_ERROR){
+            returned_code = treat_message(received, kind);
+            if ( returned_code != SUCCESS ){
+                error(CONTEXT, "Couldn't treat a message.\n");
+                exit(returned_code);
+            }
+        }
+        // Check for messages from node 0
+        kind = get_message(msqid_nodes, &received);
+        if (kind != KIND_ERROR){
+            returned_code = treat_message(received, kind);
+            if ( returned_code != SUCCESS ){
+                error(CONTEXT, "Couldn't treat a message.\n");
+                exit(returned_code);
+            }
+        }
+        // Scales jobs
+        if (is_a_job_ready() && is_no_job_executing()) {
+            returned_code = execute_next_job(msqid_nodes);
+            if ( returned_code != SUCCESS ) {
+                error(CONTEXT,
+                "Couldn't execute a job when it was supposed to be possible.\n");
+                exit(returned_code);
+            }
         }
     }
 
-    printf("Scheduler travado no wait\n");  /*TODO: remove debug printing*/
+    // TODO: process and print metrics here
+
+    // Delete process table
+    if ((returned_code=delete_table(&process_table)) != SUCCESS) {
+        error(CONTEXT, "Could not delete process table.\n");
+        exit(returned_code);
+    }
     // TODO - implementar o shutdown e o wait, abaixo segue um placeholder
 
     for(int i=0; i<N_MAX_NODES; i++){
@@ -237,6 +277,7 @@ void fork_nodes(char *const nodes[N_MAX_NODES][N_MAX_PARAMS], int n_nodes){
 // Function implementations:
 int init_hypercube_topology(){
     int n_nodes = 16;
+    quant_nodes = n_nodes;
     char *const topology[N_MAX_NODES][N_MAX_PARAMS] = {
             {NODE_PROGRAM,N0, SCHEDULER, N1,N2,N4,N8, END_PARAMS},
             {NODE_PROGRAM,N1, N0,N3,N5,N9, END_PARAMS},
@@ -265,6 +306,7 @@ int init_hypercube_topology(){
 
 int init_torus_topology(){
     int n_nodes = 16;
+    quant_nodes = n_nodes;
     char *const topology[N_MAX_NODES][N_MAX_PARAMS] = {
             {NODE_PROGRAM,N0, SCHEDULER, N1,N3,N4,N12, END_PARAMS},
             {NODE_PROGRAM,N1, N0,N2,N5,N13, END_PARAMS},
@@ -293,6 +335,7 @@ int init_torus_topology(){
 
 int init_tree_topology(){
     int n_nodes = 15;
+    quant_nodes = n_nodes;
     char *const topology[N_MAX_NODES][N_MAX_PARAMS] = {
             {NODE_PROGRAM,N0, SCHEDULER, N1,N2, END_PARAMS},
             {NODE_PROGRAM,N1, N0,N3,N4, END_PARAMS},
@@ -370,6 +413,116 @@ void destroy_msq_nodes(){
     }
 }
 
+boolean is_a_job_ready()
+{
+    return process_table != NULL && process_table->next != NULL && time(NULL) > process_table->next->start_time;
+}
+
+boolean is_no_job_executing()
+{
+    return actual_job == -1 && occupied_nodes == 0;
+}
+
+msg_kind get_message(int msqid, msg *message_received)
+{
+    if (msgrcv(msqid, message_received, sizeof(message_received->data), QUEUE_ID_SCHEDULER, IPC_NOWAIT) == -1){
+        return KIND_ERROR;
+    }
+    return message_received->data.type;
+}
+
+return_codes execute_next_job(int msqid)
+{
+    /* Colocar o job para executar nos nodes */
+    /*
+        actual_job é -1 para livre e o valor real
+        do job se estiver executando. Para os nodes
+        job terá um índice incremental para a execução
+        que será guardado em node_job.
+     */
+
+    msg to_send;
+    int i;
+
+    // printf("Executando job %d\n", process_table->next->job);
+
+    /* Gravo valores de controle */
+    process_table->next->done = True;
+    process_table->next->actual_start_time = time(NULL);
+    process_table->next->node_job = ++last_node_job;
+    actual_job = process_table->next->job;
+    occupied_nodes = quant_nodes;
+
+    /* Configuro mensagem */
+    to_send.recipient = QUEUE_ID_NODE(0);
+    to_send.data.type = KIND_PROGRAM;
+
+    /* Gravo dados principais */
+    to_send.data.msg_body.data_prog.argc = process_table->next->argc;
+    to_send.data.msg_body.data_prog.job = process_table->next->node_job;
+    to_send.data.msg_body.data_prog.delay = 0;
+    for ( i = 0; i < DATA_PROGRAM_MAX_ARG_NUM; i++ ) {
+        strcpy(to_send.data.msg_body.data_prog.argv[i],
+               process_table->next->argv[i]);
+    }
+
+    /* Envio a mensagem para a fila de mensagens de nó */
+    msgsnd(msqid, &to_send, sizeof(to_send.data), 0);
+
+    /* Atualizo qual o próximo */
+    process_table->next = process_table->first;
+    while(process_table->next != NULL && process_table->next->done) {
+      process_table->next = process_table->next->next;
+    }
+
+    return SUCCESS;
+}
+
+return_codes add_table(msg_data received)
+{
+    msg_data_program extracted = received.msg_body.data_prog;
+    table_item item;
+    int i;
+    return_codes status;
+    item.argc = extracted.argc;
+    for(i = 0; i < DATA_PROGRAM_MAX_ARG_NUM; i++){
+      strcpy(item.argv[i], extracted.argv[i]);
+    }
+    item.start_time = time(NULL) + (time_t)extracted.delay;
+    add_table_item(process_table, item);
+
+    print_table(process_table);
+
+    return SUCCESS;
+}
+
+return_codes save_metrics(msg_data received)
+{
+    info(CONTEXT, "Recebida métrica!");
+    printf("Do job %d\n", received.msg_body.data_metrics.job);
+    return SUCCESS;
+}
+
+return_codes treat_message(msg received, msg_kind kind)
+{
+    switch (kind)
+    {
+    case KIND_PROGRAM:
+        add_table(received.data);
+        break;
+
+    case KIND_METRICS:
+        save_metrics(received.data);
+        break;
+
+    case KIND_PID:
+    case KIND_ERROR:
+    default:
+        return INVALID_ARG;
+    }
+}
+
 void shutdown() {
     info(CONTEXT, "Shutdown signal received! Shutting down scheduler...\n");
+    received_shutdown = True;
 }

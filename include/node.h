@@ -16,6 +16,7 @@
 void handle_terminate();
 int handle_program(msg request);
 int handle_metrics(msg request);
+int handle_commands(msg request);
 
 
 

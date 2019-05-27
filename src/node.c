@@ -19,17 +19,15 @@ int main(int argc, char **argv){
 
     // Argument amount check
     if(argc < 2 || argc > 7){
-        error(CONTEXT,
-                "Invalid argument count\n");
+        error(CONTEXT, "Invalid argument count\n");
         exit(COUNT_ARGS);
     }
 
     // Getting the scheduler IPC message queue
-    msq_id = msgget(QUEUE_NODES, 0x1FF);
+    msq_id = msgget(QUEUE_NODES, 0666);
     // Checks if queue was created, if not, it's a sign that scheduler has never been ran
     if(msq_id < 0){
-        error(CONTEXT,
-                "Scheduler is not running. Stopping...\n");
+        error(CONTEXT, "Scheduler is not running. Stopping...\n");
         exit(SCHEDULER_DOWN);
     }
 
@@ -131,7 +129,6 @@ int handle_program(msg request){
 
         // Forking a new process
         pid = fork();
-
         // Child process will load the new executable, via execvp
         if(pid == 0){
             char* argv[DATA_PROGRAM_MAX_ARG_NUM + 1];
@@ -142,7 +139,6 @@ int handle_program(msg request){
             /*TODO: Fix the execvp system call*/
             // execvp(full_path_of_executable, argv); argv[0] = full_path_of_executable
             execvp(argv[0], (char * const *) argv);
-
             printf("errno: %d\n", errno);                                                                               /* TODO: remove debug printing */
             error(NULL, "[Node %d]: Node could not start required executable. Exiting with error code %d...\n", node_id-4,
                     EXEC_FAILED);
@@ -162,13 +158,14 @@ int handle_program(msg request){
 
             // Sets message type to metrics
             metrics.data.type = KIND_METRICS;
+            printf("Nó %d está com as métricas prontas!\n", node_id-4);
 
             // Send the message to the lower node
             metrics.recipient = adjacent_nodes[1];
             if(msgsnd(msq_id, &metrics, sizeof(metrics.data), 0) == 0)                                                  /* TODO: remove debug printing */
-                printf("No %d enviando metricas para o nó %d\n", node_id-4, adjacent_nodes[1]-4);
+                printf("No %d enviando métricas para o nó %d\n", node_id-4, adjacent_nodes[1]-4);
             else
-                printf("No %d falhou ao retornar metricas\n", node_id-4);
+                printf("No %d falhou ao retornar métricas\n", node_id-4);
         }
         // Error while forking a new process, answer return will break the main loop
         else {
@@ -184,14 +181,14 @@ int handle_program(msg request){
 
 // Handles a metric message
 int handle_metrics(msg request){
-    printf("No %d recebeu uma metrica\n", node_id-4);                                                                   /* TODO: remove debug printing */
+    printf("No %d recebeu uma métrica\n", node_id-4);                                                                   /* TODO: remove debug printing */
     // last_init_job variable is updated at handle_program function
     if(request.data.msg_body.data_metrics.job >= last_init_job){
         // Gets the lower neighbor ID
         // Here I'm assuming that the scheduler ID is always lower than any node
         request.recipient = adjacent_nodes[1];
         if(msgsnd(msq_id, &request, sizeof(request.data), 0) == 0)
-            printf("No %d encaminhou metricas para o no %d\n", node_id-4, adjacent_nodes[1]-4);                         /* TODO: remove debug printing */
+            printf("No %d encaminhou métricas para o no %d\n", node_id-4, adjacent_nodes[1]-4);                         /* TODO: remove debug printing */
         else
             printf("No %d falhou ao encaminhar metrica\n", node_id-4);
     }
