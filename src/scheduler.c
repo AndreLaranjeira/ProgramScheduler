@@ -137,7 +137,6 @@ int main(int argc, char **argv){
     fwd_test.data.msg_body.data_prog.job = 1;
     fwd_test.data.msg_body.data_prog.argc = 1;
     strcpy(fwd_test.data.msg_body.data_prog.argv[0], "./dummy");
-    *fwd_test.data.msg_body.data_prog.argv[1] = (char) 0;
     msgsnd(msqid_nodes, &fwd_test, sizeof(fwd_test.data), 0);
 
     for(int i=0; i<N_MAX_NODES; i++){
