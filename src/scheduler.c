@@ -491,11 +491,12 @@ return_codes add_table(msg_data received)
 
 return_codes save_metrics(msg_data received)
 {
+    info(CONTEXT, "Recebida métrica ");
+    printf("do job %d. ", actual_job);
     if((--occupied_nodes) == 0) {
         actual_job = -1;
     }
-    info(CONTEXT, "Recebida métrica ");
-    printf("do job %d. Faltam %d métricas.\n", actual_job, occupied_nodes);
+    printf("Faltam %d métricas.\n", occupied_nodes);
     return SUCCESS;
 }
 
