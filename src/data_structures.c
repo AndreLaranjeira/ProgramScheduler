@@ -72,7 +72,7 @@ return_codes add_table_item(scheduler_table *table, table_item item)
       table->first = aux2;
     } else {
       aux = table->first;
-      while(aux->next != NULL && aux->next->start_time < item.start_time){
+      while(aux->next != NULL && aux->next->start_time <= item.start_time){
         aux = aux->next;
       }
 
