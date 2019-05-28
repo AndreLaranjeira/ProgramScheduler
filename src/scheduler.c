@@ -184,10 +184,10 @@ int main(int argc, char **argv){
         error(CONTEXT, "Could not delete process table.\n");
         exit(returned_code);
     }
-    // TODO - implementar o shutdown e o wait, abaixo segue um placeholder
 
-    for(int i=0; i<N_MAX_NODES; i++){
+    for(int i=0; i<quant_nodes; i++){
         if(nodes_pid[i] !=0){
+            kill(nodes_pid[i], SIGTERM);
             wait(&status);
         }
     }
@@ -491,8 +491,11 @@ return_codes add_table(msg_data received)
 
 return_codes save_metrics(msg_data received)
 {
-    info(CONTEXT, "Recebida métrica!");
-    printf("Do job %d\n", received.msg_body.data_metrics.job);
+    if((--occupied_nodes) == 0) {
+        actual_job = -1;
+    }
+    info(CONTEXT, "Recebida métrica ");
+    printf("do job %d. Faltam %d métricas.\n", actual_job, occupied_nodes);
     return SUCCESS;
 }
 
