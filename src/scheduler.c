@@ -26,8 +26,8 @@
 #define NODE_PROGRAM "node"
 
 // Function headers:
-int initialize_msq_top_level();
-int initialize_msq_nodes();
+void initialize_msq_top_level();
+void initialize_msq_nodes();
 void destroy_msq_top_level();
 void destroy_msq_nodes();
 
@@ -72,7 +72,6 @@ int occupied_nodes = 0, quant_nodes;
 int main(int argc, char **argv){
 
     // Variables declaration:
-    int msqid_top_level, msqid_nodes;
     msg shutdown_info, received;
     msg_kind kind;
     return_codes returned_code;
@@ -84,7 +83,8 @@ int main(int argc, char **argv){
     char previous_topologies[80] = "";
 
     // Signal assignment:
-    signal(SIGINT, shutdown);       // Allows CTRL-C to shutdown!
+    signal(SIGABRT, set_panic_flag);    // In case something goes wrong.
+    signal(SIGINT, shutdown);           // Allows CTRL-C to shutdown!
 
     // Arguments number handling:
     if(argc != 2){
@@ -112,14 +112,11 @@ int main(int argc, char **argv){
         exit(INVALID_ARG);
     }
 
-    // Set the abort function to creation of nodes
-    signal(SIGABRT, set_panic_flag);
-
     // Create messages queue for shutdown, execute and scheduler to communicate
-    msqid_top_level = initialize_msq_top_level();
+    initialize_msq_top_level();
 
     // Create messages queue for nodes and scheduler to communicate
-    msqid_nodes = initialize_msq_nodes();
+    initialize_msq_nodes();
 
     // First things first. The shutdown process needs to know this process' PID
     // to able to send a SIGTERM. So we will write a message informing our PID.
@@ -361,8 +358,7 @@ int init_tree_topology(){
     return 0;
 }
 
-int initialize_msq_top_level(){
-    int msqid_top_level;
+void initialize_msq_top_level(){
 
     if( (msqid_top_level = msgget(QUEUE_TOP_LEVEL, IPC_CREAT|0x1FF)) != -1 ){
         info(CONTEXT,
@@ -373,11 +369,9 @@ int initialize_msq_top_level(){
         exit(IPC_MSG_QUEUE_CREAT);
     }
 
-    return  msqid_top_level;
 }
 
-int initialize_msq_nodes(){
-    int msqid_nodes;
+void initialize_msq_nodes(){
 
     if( (msqid_nodes = msgget(QUEUE_NODES, IPC_CREAT|0x1FF)) != -1 ){
         info(CONTEXT,
@@ -388,7 +382,6 @@ int initialize_msq_nodes(){
         exit(IPC_MSG_QUEUE_CREAT);
     }
 
-    return msqid_nodes;
 }
 
 void destroy_msq_top_level(){
