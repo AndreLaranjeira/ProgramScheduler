@@ -38,6 +38,8 @@ return_codes add_table_item(scheduler_table *table, table_item item)
       return ALLOC_ERROR;
     }
 
+    aux->done = False;
+    aux->metrics_idx = 0;
     aux->job = ++(table->last_job);
     aux->start_time = item.start_time;
     aux->argc = item.argc;
