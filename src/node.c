@@ -190,7 +190,7 @@ int handle_metrics(msg request){
         if(msgsnd(msq_id, &request, sizeof(request.data), 0) == 0)
             printf("No %d encaminhou métricas para o no %d\n", node_id-4, adjacent_nodes[1]-4);                         /* TODO: remove debug printing */
         else
-            printf("No %d falhou ao encaminhar metrica\n", node_id-4);
+            printf("No %d falhou ao encaminhar métrica\n", node_id-4);
     }
     // Return clause possible of expansion in future
     return True;
