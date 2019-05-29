@@ -123,6 +123,7 @@ int handle_program(msg request){
     int ret_state;                  // Variable to wait child process (return value)
     int pid;                        // PID of child process
     msg metrics;                    // Message to hold the running process statistics
+    msg queue_listening;            // Message to clear node postal box
     time_t rawtime;                 // Variable to grab current CPU time
     int answer = True;              // Control variable to continue the execution
 
@@ -155,12 +156,12 @@ int handle_program(msg request){
         pid = fork();
         // Child process will load the new executable, via execvp
         if(pid == 0){
+            // Assembling array of char pointers
             char* argv[MAX_ARG_NUM + 1];
             for (int i = 0; i < request.data.msg_body.data_prog.argc; ++i)
                 argv[i] = (char *) &(request.data.msg_body.data_prog.argv[i]);
             argv[request.data.msg_body.data_prog.argc] = (char *) NULL;
 
-            /*TODO: Fix the execvp system call*/
             // execvp(full_path_of_executable, argv); argv[0] = full_path_of_executable
             execvp(argv[0], (char * const *) argv);
             printf("errno: %d\n", errno);                                                                               /* TODO: remove debug printing */
@@ -176,6 +177,13 @@ int handle_program(msg request){
             // Captures the finish time
             time(&rawtime);
             metrics.data.msg_body.data_metrics.end_time = *localtime(&rawtime);
+
+
+            // Node clears it's postal box to avoid resource exhaustion
+            while(msgrcv(msq_id, &queue_listening, sizeof(queue_listening.data), node_id, IPC_NOWAIT) == 0){
+                if(queue_listening.data.type == KIND_METRICS)
+                    handle_metrics(queue_listening);
+            }
 
             // Stores the child process return code
             metrics.data.msg_body.data_metrics.return_code = ret_state;
