@@ -1,9 +1,25 @@
+// Compiler includes:
+#include <errno.h>                                                      /*TODO: remove debug printing*/
+#include <stdlib.h>
+#include <string.h>
+#include <sys/ipc.h>
+#include <sys/msg.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <unistd.h>
+
+
 // Project includes:
 #include "console.h"
-#include "node.h"
+#include "data_structures.h"
 
 // Macros
 #define CONTEXT "Node"
+
+// Function prototypes
+void handle_terminate();
+int handle_program(msg request);
+int handle_metrics(msg request);
 
 // Global variables
 int node_id, msq_id;        // Node ID and IPC queue ID
@@ -14,7 +30,6 @@ int last_init_job = 0;      // Holds the last run job ID
 int main(int argc, char **argv){
 
     char *error_check;              // Pointer used to detect char to int conversion errors
-    int proceed = True;             // Int to hold the stop condition and will return program stop condition
     msg queue_listening;            // Message variable to receive messages from queue
 
     // Argument amount check
@@ -42,11 +57,21 @@ int main(int argc, char **argv){
 
     // Allocating array of adjacent nodes. Index 0 holds array size
     adjacent_nodes = (int *) malloc(sizeof(int));
+    if(adjacent_nodes == NULL) {
+        error(NULL, "[Node %d]: ran out of memory. Dynamic allocation failed.\n");
+        kill(getppid(), SIGABRT);
+    }
+
     adjacent_nodes[0] = 0;
 
     // Trying to convert adjacent node arguments to integers
     for(int i = 2; i < argc; i++){
         adjacent_nodes = (int *) realloc(adjacent_nodes, sizeof(int)*(adjacent_nodes[0] + 2));
+        if(adjacent_nodes == NULL){
+            error(NULL, "[Node %d]: ran out of memory. Dynamic allocation failed.\n");
+            kill(getppid(), SIGABRT);
+        }
+
         adjacent_nodes[0]++;
         adjacent_nodes[i-1] = (int) strtol(argv[i], &error_check, 0);
         if(argv[i] == error_check){
@@ -61,37 +86,36 @@ int main(int argc, char **argv){
     signal(SIGTERM, handle_terminate);
 
 
-    // Now, node is ready to run. 'Infinity loop' starts
-    while(proceed == True){
+    // Now, node is ready to run.
+    // Infinity loop starts, only a signal can finish a node
+    while(True){
         // Blocked system call. Listening to the message queue
         msgrcv(msq_id, &queue_listening, sizeof(queue_listening.data), node_id, 0);
         // Decoding the received message type
-        if(queue_listening.data.type == KIND_PROGRAM)
-            // Handles a message to execute a program
-            proceed = handle_program(queue_listening);
-        else if(queue_listening.data.type == KIND_METRICS)
-            // Handles a message to return a program metrics
-            proceed = handle_metrics(queue_listening);
-        else {
-            // Received a unknown .type code
-            error(NULL, "[Node %d]: Unknown operation %d received. Aborting...\n", node_id-4, queue_listening.data.type);
-            // Stop the execution by breaking the loop
-            proceed = False;
+        switch (queue_listening.data.type){
+            case KIND_PROGRAM:
+                // Handles a message to execute a program
+                handle_program(queue_listening);
+                break;
+
+            case KIND_METRICS:
+                // Handles a message to return a program metrics
+                handle_metrics(queue_listening);
+                break;
+
+            default:
+                // Received a unknown message type
+                error(NULL, "[Node %d]: Unknown operation %d received. Ignoring message...\n", node_id, queue_listening.data.type);
+                break;
         }
     }
-
-    // Liberates the array memory
-    free(adjacent_nodes);
-
-    return proceed;
-
 }
 
 
 // This function is binded to SIGTERM signal and will handle the termination of node process
 void handle_terminate(){
     free(adjacent_nodes);
-    exit(ABORT_RECEIVED);
+    exit(SUCCESS);
 }
 
 // Handles a request to execute something
