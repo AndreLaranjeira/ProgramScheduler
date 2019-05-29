@@ -42,6 +42,7 @@ return_codes execute_next_job(int msqid);
 return_codes add_table(msg_data received);
 return_codes save_metrics(msg_data received);
 return_codes treat_message(msg received, msg_kind kind);
+return_codes print_metrics(scheduler_table* table);
 
 void panic_function();
 void set_panic_flag();
@@ -146,8 +147,17 @@ int main(int argc, char **argv){
 
 
     // Main loop
-    while(!received_shutdown) {
+    while(!received_shutdown || !is_no_job_executing()) {
 
+        // Scales jobs
+        if (is_a_job_ready() && is_no_job_executing()) {
+            returned_code = execute_next_job(msqid_nodes);
+            if ( returned_code != SUCCESS ) {
+                error(CONTEXT,
+                "Couldn't execute a job when it was supposed to be possible.\n");
+                exit(returned_code);
+            }
+        }
         // Check for messages from exec
         kind = get_message(msqid_top_level, &received);
         if (kind != KIND_ERROR){
@@ -166,18 +176,10 @@ int main(int argc, char **argv){
                 exit(returned_code);
             }
         }
-        // Scales jobs
-        if (is_a_job_ready() && is_no_job_executing()) {
-            returned_code = execute_next_job(msqid_nodes);
-            if ( returned_code != SUCCESS ) {
-                error(CONTEXT,
-                "Couldn't execute a job when it was supposed to be possible.\n");
-                exit(returned_code);
-            }
-        }
     }
 
     // TODO: process and print metrics here
+    print_metrics(process_table);
 
     // Delete process table
     if ((returned_code=delete_table(&process_table)) != SUCCESS) {
@@ -481,6 +483,7 @@ return_codes add_table(msg_data received)
     for(i = 0; i < DATA_PROGRAM_MAX_ARG_NUM; i++){
       strcpy(item.argv[i], extracted.argv[i]);
     }
+    item.arrival_time = time(NULL);
     item.start_time = time(NULL) + (time_t)extracted.delay;
     add_table_item(process_table, item);
 
@@ -491,12 +494,19 @@ return_codes add_table(msg_data received)
 
 return_codes save_metrics(msg_data received)
 {
-    info(CONTEXT, "Recebida métrica ");
-    printf("do job %d. ", actual_job);
+    table_item *aux;
+    aux = process_table->first;
+    while(aux != NULL && aux->node_job != received.msg_body.data_metrics.job) {
+        aux = aux->next;
+    }
+    if (aux == NULL) {
+        return NO_JOB_ON_TABLE_ERROR;
+    }
+    aux->metrics[aux->metrics_idx++] = received.msg_body.data_metrics;
+    info(CONTEXT, "Recebida métrica do job %d. Faltam %d métricas.\n", actual_job, occupied_nodes-1);
     if((--occupied_nodes) == 0) {
         actual_job = -1;
     }
-    printf("Faltam %d métricas.\n", occupied_nodes);
     return SUCCESS;
 }
 
@@ -517,6 +527,51 @@ return_codes treat_message(msg received, msg_kind kind)
     default:
         return INVALID_ARG;
     }
+}
+
+return_codes print_metrics(scheduler_table* table)
+{
+    /* TODO:
+    Substituir o corpo desta função com print final das métricas.
+    No momento os prints são só para debug.
+    > Nota: o retorno de ctime e asctime é uma string "global".
+    Sempre atribua e dê o print antes de gerar a próxima string ou
+    copie o valor de saída da função para uma string local.
+     */
+    table_item *aux;
+    int i;
+    aux = table->first;
+    char *some_time;
+    while(aux != NULL){
+        some_time = ctime(&(aux->arrival_time));
+        some_time[(int)strlen(some_time)-1] = '\0';
+        printf("Job: %d | Executado: %d | Chegada: %s | ", aux->job, aux->done, some_time);
+        some_time = ctime(&(aux->start_time));
+        some_time[(int)strlen(some_time)-1] = '\0';
+        printf("Começo desejado: %s | ", some_time);
+        if (aux->done) {
+            some_time = ctime(&(aux->actual_start_time));
+            some_time[(int)strlen(some_time)-1] = '\0';
+            printf("Envio da mensagem: %s | ", some_time);
+        }
+
+        printf("Comando: ");
+        for (i = 0; i < aux->argc; i++){
+            printf("%s ", aux->argv[i]);
+        }
+        printf("\n");
+        for (i = 0; i < aux->metrics_idx; i++){
+            some_time = asctime(&(aux->metrics[i].start_time));
+            some_time[(int)strlen(some_time)-1] = '\0';
+            printf("    Start: %s | ", some_time);
+            some_time = asctime(&(aux->metrics[i].end_time));
+            some_time[(int)strlen(some_time)-1] = '\0';
+            printf("Stop: %s | ", some_time);
+            printf("Return Code: %d\n",aux->metrics[i].return_code);
+        }
+        aux = aux->next;
+    }
+    return SUCCESS;
 }
 
 void shutdown() {

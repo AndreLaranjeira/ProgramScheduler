@@ -59,6 +59,7 @@ typedef enum returns{
     FORK_ERROR,
     EXEC_FAILED,
     ABORT_RECEIVED,
+    NO_JOB_ON_TABLE_ERROR,
     UNKNOWN_ERROR
 }return_codes;
 
@@ -118,7 +119,7 @@ typedef struct item {
   msg_data_metrics metrics[16];
   boolean done;
   struct item *next;
-  time_t start_time, actual_start_time;
+  time_t start_time, actual_start_time, arrival_time;
   int argc;
   char argv[DATA_PROGRAM_MAX_ARG_NUM][DATA_PROGRAM_MAX_ARG_LEN];
 } table_item;
@@ -128,7 +129,6 @@ typedef struct table{
   table_item *first;
   table_item *last;
   table_item *next;
-  time_t next_alarm;
   int count;
   int last_job;
 } scheduler_table;
