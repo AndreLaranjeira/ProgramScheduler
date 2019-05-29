@@ -108,7 +108,7 @@ int handle_program(msg request){
         printf("No %d recebeu pedido para o job %d\n", node_id-4, request.data.msg_body.data_prog.job);                 /* TODO: remove debug printing */
         // Broadcast execution message to neighbors
         for(int i = 1; i <= adjacent_nodes[0]; i++){
-            if(adjacent_nodes[i] != QUEUE_ID_SCHEDULER) {
+            if(adjacent_nodes[i] != QUEUE_ID_SCHEDULER && adjacent_nodes[i] != request.recipient) {
                 request.recipient = adjacent_nodes[i];
                 if(msgsnd(msq_id, &request, sizeof(request.data), 0) == 0)                                              /* TODO: remove debug printing */
                     printf("No %d broadcast para o nó %d\n", node_id-4, adjacent_nodes[i]-4);
@@ -131,7 +131,7 @@ int handle_program(msg request){
         pid = fork();
         // Child process will load the new executable, via execvp
         if(pid == 0){
-            char* argv[DATA_PROGRAM_MAX_ARG_NUM + 1];
+            char* argv[MAX_ARG_NUM + 1];
             for (int i = 0; i < request.data.msg_body.data_prog.argc; ++i)
                 argv[i] = (char *) &(request.data.msg_body.data_prog.argv[i]);
             argv[request.data.msg_body.data_prog.argc] = (char *) NULL;
