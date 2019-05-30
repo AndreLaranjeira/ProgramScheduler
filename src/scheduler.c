@@ -535,24 +535,41 @@ return_codes print_metrics(scheduler_table* table)
     table_item *aux;
     aux = table->first;
     int node_error;
+    char *some_time;
     double time_aux, best_node_time_seconds;
-    time_measure best_node_time;
+    time_t time_t_aux;
+    time_measure best_node_time, greatest_node_time, smallest_node_time;
 
     while(aux != NULL){
 
         // Print Job status
-        printf("Job: %d | Done?: %d | ", aux->job, aux->done);
+        time_aux = difftime(aux->start_time, aux->arrival_time);
+        printf("Job: %3d | Done?: %s | Delay: %3.0lfs | ", aux->job, (aux->done ? "T":"F"), time_aux);
 
-        // Gets better time and verify if any error occurred at nodes
+        // Gets better time, greatest, smallest and verify if any error occurred at nodes
         node_error = 0;
         best_node_time_seconds = DBL_MAX;
+        smallest_node_time = aux->metrics[0].start_time;
+        greatest_node_time = aux->metrics[0].end_time;
         for (i = 0; i < aux->metrics_idx; i++) {
 
-            // gets best time in seconds
+            // gets best time
             time_aux = difftime(mktime(&aux->metrics[i].end_time), mktime(&aux->metrics[i].start_time));
             if (time_aux < best_node_time_seconds) {
                 best_node_time_seconds = time_aux;
                 best_node_time = aux->metrics[i].end_time;
+            }
+
+            // get smallest time
+            time_aux = difftime(mktime(&smallest_node_time), mktime(&aux->metrics[i].start_time));
+            if(time_aux > 0){
+                smallest_node_time = aux->metrics[i].start_time;
+            }
+
+            // get greatest time
+            time_aux = difftime(mktime(&greatest_node_time), mktime(&aux->metrics[i].end_time));
+            if(time_aux < 0){
+                greatest_node_time = aux->metrics[i].end_time;
             }
 
             // check for errors in node
@@ -566,20 +583,37 @@ return_codes print_metrics(scheduler_table* table)
 
             // Calculate and show Turnround Time
             time_aux = difftime(mktime(&best_node_time), aux->arrival_time);
-            printf("Turnaround: %.0lfs | ", time_aux);
+            printf("Turnaround: %3.0lfs | ", time_aux);
 
             // Calculate and show Scheduler Time
             time_aux = difftime(mktime(&best_node_time), aux->actual_start_time);
-            printf("Scheduler Time: %.0lfs | ", time_aux);
+            printf("Scheduler Time: %3.0lfs | ", time_aux);
 
             // Show Best Node Time
-            printf("Node Time: %.0lfs | ", best_node_time_seconds);
+            printf("Node Time: %3.0lfs | ", best_node_time_seconds);
+
+            // Show smallest node start Time
+            time_t_aux = mktime(&smallest_node_time);
+            some_time = ctime(&time_t_aux);
+            some_time[(int)strlen(some_time)-1] = '\0';
+            printf("Start Node: %s | ", some_time);
+
+            // Show greatest node start Time
+            time_t_aux = mktime(&greatest_node_time);
+            some_time = ctime(&time_t_aux);
+            some_time[(int)strlen(some_time)-1] = '\0';
+            printf("End Node: %s | ", some_time);
 
             // Show node error
             printf("Node error: %d | ", node_error);
 
         }else{
-            printf("Turnaround: -- | Scheduler Time: -- | Node Time: -- | Node error: %d | ", node_error);
+            printf("Turnaround: ---- | "
+                   "Scheduler Time: ---- | "
+                   "Node Time: ---- | "
+                   "Start Node: --- --- -- --:--:-- ---- | "
+                   "End Node: --- --- -- --:--:-- ---- | "
+                   "Node error: %d | ", node_error);
         }
 
         // Print Job command
