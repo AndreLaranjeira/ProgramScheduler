@@ -16,6 +16,8 @@
 
 // Macros:
 #define CONTEXT "Execute"
+#define ARG_DELAY 1     // Delay position in argv.
+#define ARG_EXE 2       // Executable position in argv.
 
 // Main function:
 int main(int argc, char **argv){
@@ -30,19 +32,19 @@ int main(int argc, char **argv){
   // Argument handling:
   if(argc < 3) {
     error(CONTEXT,
-          "Wrong argument count.\n\nUsage: ./execute <program_name> [optional_args] <delay>.\n");
+          "Wrong argument count.\n\nUsage: ./execute <delay> <program_name> [program_args].\n");
     exit(COUNT_ARGS);
   }
 
-  if(access(argv[1], X_OK) < 0){
+  if(access(argv[ARG_EXE], X_OK) < 0){
     error(CONTEXT,
           "The file %s does not exist or you don't have needed permissions!\n",
-          argv[1]);
+          argv[ARG_EXE]);
     exit(FILE_ERROR);
   }
 
-  delay = strtoul(argv[argc - 1], &err_check, 0);         // Delay is always the last argument.
-    if(argv[argc-1] == err_check || argv[argc-1][0] == '-'){
+  delay = strtoul(argv[ARG_DELAY], &err_check, 0);
+    if(argv[ARG_DELAY] == err_check || argv[ARG_DELAY][0] == '-'){
       error(CONTEXT,
             "Unable to decode delay value!\n");
       exit(INVALID_ARG);
@@ -65,9 +67,9 @@ int main(int argc, char **argv){
   execute_msg.data.msg_body.data_prog.argc = argc-2;
 
   // Copy the program arguments one by one:
-  // Note: The data program arguments begin at position 1 of argv.
+  // Note: The data program arguments begin at position ARG_EXE of argv.
   for(i = 0; i < argc-2; i++)
-    strcpy(execute_msg.data.msg_body.data_prog.argv[i], argv[i+1]);
+    strcpy(execute_msg.data.msg_body.data_prog.argv[i], argv[i+ARG_EXE]);
 
   // Send the message:
   if(msgsnd(msqid, &execute_msg, sizeof(execute_msg.data), 0) == -1) {
@@ -79,7 +81,7 @@ int main(int argc, char **argv){
   // Notify the user:
   success(CONTEXT,
           "Program '%s' scheduled for execution with %d arguments in at least %u seconds!\n",
-          argv[1], argc-2, delay);
+          argv[ARG_EXE], argc-2, delay);
 
   return 0;
 
