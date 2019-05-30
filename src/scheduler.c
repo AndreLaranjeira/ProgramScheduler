@@ -150,7 +150,7 @@ int main(int argc, char **argv){
     while(!received_shutdown || !is_no_job_executing()) {
 
         // Scales jobs
-        if (is_a_job_ready() && is_no_job_executing()) {
+        if (!received_shutdown && is_a_job_ready() && is_no_job_executing()) {
             returned_code = execute_next_job(msqid_nodes);
             if ( returned_code != SUCCESS ) {
                 error(CONTEXT,
