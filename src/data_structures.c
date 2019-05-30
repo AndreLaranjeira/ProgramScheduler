@@ -32,20 +32,22 @@ return_codes add_table_item(scheduler_table *table, table_item item)
     return INVALID_ARG;
   }
 
-  if ( table->first == NULL ) {
-    aux = (table_item*) malloc(sizeof(table_item));
-    if (aux == NULL){
-      return ALLOC_ERROR;
-    }
+  aux = (table_item*) malloc(sizeof(table_item));
+  if (aux == NULL){
+    return ALLOC_ERROR;
+  }
 
-    aux->done = False;
-    aux->metrics_idx = 0;
-    aux->job = ++(table->last_job);
-    aux->start_time = item.start_time;
-    aux->argc = item.argc;
-    for(i = 0; i < DATA_PROGRAM_MAX_ARG_NUM; i++){
-      strcpy(aux->argv[i], item.argv[i]);
-    }
+  aux->done = False;
+  aux->metrics_idx = 0;
+  aux->job = ++(table->last_job);
+  aux->start_time = item.start_time;
+  aux->argc = item.argc;
+  for(i = 0; i < DATA_PROGRAM_MAX_ARG_NUM; i++){
+    strcpy(aux->argv[i], item.argv[i]);
+  }
+
+  if ( table->first == NULL ) {
+
     aux->next = NULL;
 
     table->first = aux;
@@ -54,34 +56,22 @@ return_codes add_table_item(scheduler_table *table, table_item item)
     table->count = 1;
     table->next_alarm = aux->start_time;
   } else {
-    aux2 = (table_item*) malloc(sizeof(table_item));
-    if (aux2 == NULL){
-      return ALLOC_ERROR;
-    }
-    aux2->done = False;
-    aux2->metrics_idx = 0;
-    aux2->job = ++(table->last_job);
-    aux2->start_time = item.start_time;
-    aux2->argc = item.argc;
-    for(i = 0; i < DATA_PROGRAM_MAX_ARG_NUM; i++){
-      strcpy(aux2->argv[i], item.argv[i]);
-    }
 
     if(item.start_time < table->first->start_time) {
-      aux2->next = table->first;
-      table->first = aux2;
+      aux->next = table->first;
+      table->first = aux;
     } else {
-      aux = table->first;
-      while(aux->next != NULL && aux->next->start_time <= item.start_time){
-        aux = aux->next;
+      aux2 = table->first;
+      while(aux2->next != NULL && aux2->next->start_time <= item.start_time){
+        aux2 = aux2->next;
       }
 
-      aux2->next = aux->next;
-      if (aux == table->last){
-        table->last = aux2;
+      aux->next = aux2->next;
+      if (aux2 == table->last){
+        table->last = aux;
       }
 
-      aux->next = aux2;
+      aux2->next = aux;
     }
     table->count++;
 

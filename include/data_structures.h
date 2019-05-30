@@ -37,6 +37,11 @@
 #define N14     "18"
 #define N15     "19"
 
+// Node control macros:
+#define N_MAX_NODES 16
+#define N_MAX_PARAMS 8
+#define END_PARAMS (char*) NULL
+
 // Fixed argument number and length for the msg_data_program data type:
 #define DATA_PROGRAM_MAX_ARG_NUM 20
 #define DATA_PROGRAM_MAX_ARG_LEN 20
@@ -115,7 +120,7 @@ typedef struct message {
 //Scheduler table
 typedef struct item {
   int32_t job, node_job, metrics_idx;
-  msg_data_metrics metrics[16];
+  msg_data_metrics metrics[N_MAX_NODES];
   boolean done;
   struct item *next;
   time_t start_time, actual_start_time;

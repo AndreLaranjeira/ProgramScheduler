@@ -20,16 +20,11 @@
 
 // Macros:
 #define CONTEXT "Scheduler"
-#define END_PARAMS (char*) NULL
-#define N_MAX_PARAMS 8
-#define N_MAX_NODES 16
 #define NODE_PROGRAM "node"
 
 // Function headers:
-void initialize_msq_top_level();
-void initialize_msq_nodes();
-void destroy_msq_top_level();
-void destroy_msq_nodes();
+void initialize_msg_queues();
+void destroy_msg_queues();
 
 int init_hypercube_topology();
 int init_torus_topology();
@@ -112,11 +107,8 @@ int main(int argc, char **argv){
         exit(INVALID_ARG);
     }
 
-    // Create messages queue for shutdown, execute and scheduler to communicate
-    initialize_msq_top_level();
-
-    // Create messages queue for nodes and scheduler to communicate
-    initialize_msq_nodes();
+    // Create messages queues needed for the application:
+    initialize_msg_queues();
 
     // First things first. The shutdown process needs to know this process' PID
     // to able to send a SIGTERM. So we will write a message informing our PID.
@@ -193,8 +185,7 @@ int main(int argc, char **argv){
     }
 
     // Clean up the message queues:
-    destroy_msq_top_level();
-    destroy_msq_nodes();
+    destroy_msg_queues();
 
     return 0;
 }
@@ -227,11 +218,8 @@ void panic_function(){
         wait(&status);
     }
 
-    // Destroy messages queue of shutdown, execute and scheduler
-    destroy_msq_top_level();
-
-    // Destroy messages queue of nodes and scheduler
-    destroy_msq_nodes();
+    // Clean up the message queues:
+    destroy_msg_queues();
 
     error(CONTEXT,
             "something went wrong at creation of nodes, please check if 'node' program file are in the same"
@@ -358,50 +346,55 @@ int init_tree_topology(){
     return 0;
 }
 
-void initialize_msq_top_level(){
+void initialize_msg_queues(){
 
-    if( (msqid_top_level = msgget(QUEUE_TOP_LEVEL, IPC_CREAT|0x1FF)) != -1 ){
+    // Acquire the top level message queue:
+    msqid_top_level = msgget(QUEUE_TOP_LEVEL, IPC_CREAT|0x1FF);
+
+    // Acquire the nodes message queue:
+    msqid_nodes = msgget(QUEUE_NODES, IPC_CREAT|0x1FF);
+
+    if((msqid_top_level != -1) && (msqid_nodes != -1)){
         info(CONTEXT,
-             "Messages queue for shutdown, execute and scheduler created with success!\n");
+             "Scheduler message queues created with success!\n");
     }else{
         error(CONTEXT,
-                "An error occur trying to create a messages queue for shutdown, execute and scheduler !\n");
+                "An error occur trying to create a message queue!\n");
         exit(IPC_MSG_QUEUE_CREAT);
     }
 
 }
 
-void initialize_msq_nodes(){
+void destroy_msg_queues(){
 
-    if( (msqid_nodes = msgget(QUEUE_NODES, IPC_CREAT|0x1FF)) != -1 ){
+    int status1, status2;
+
+    // Destroy the top level message queue:
+    status1 = msgctl(msqid_top_level, IPC_RMID, NULL);
+
+    // Destroy the nodes message queue:
+    status2 = msgctl(msqid_nodes, IPC_RMID, NULL);
+
+    // Now, I'm sure you are wondering: why save the return status into
+    // variables? Can't I just execute these commands inside the if conditional
+    // clause?
+    //
+    // The answer is simple: C implements smart evaluation for the "&&"
+    // and "||" logical operation. That means that if the first destruction
+    // fails inside an "&&" conditional clause, the second destruction command
+    // is NEVER EXECUTED because the condition will always evaluate to 0.
+    //
+    // Hence, these status variables are always needed! You learn something new
+    // everyday.
+    //
+    // TL;DR: DO NOT PUT THOSE STATEMENTS IN A CONDITIONAL CLAUSE!!!
+
+    if((status1 != -1) && (status2 != -1)){
         info(CONTEXT,
-             "Messages queue for nodes and scheduler created with success!\n");
+             "Scheduler message queues destroyed with success!\n");
     }else{
         error(CONTEXT,
-                "An error occur trying to create a messages queue for nodes and scheduler !\n");
-        exit(IPC_MSG_QUEUE_CREAT);
-    }
-
-}
-
-void destroy_msq_top_level(){
-    if(msgctl(msqid_top_level, IPC_RMID, NULL) != -1){
-        info(CONTEXT,
-             "Messages queue for shutdown, execute and scheduler destroyed with success!\n");
-    }else{
-        error(CONTEXT,
-                "An error occur trying to destroy a messages queue for shutdown, execute and scheduler !\n");
-        exit(IPC_MSG_QUEUE_RMID);
-    }
-}
-
-void destroy_msq_nodes(){
-    if(msgctl(msqid_nodes, IPC_RMID, NULL) != -1){
-        info(CONTEXT,
-             "Messages queue for nodes and scheduler destroyed with success!\n");
-    }else{
-        error(CONTEXT,
-                "An error occur trying to destroy a messages queue for nodes and scheduler !\n");
+                "An error occurred while trying to destroy a message queue!\n");
         exit(IPC_MSG_QUEUE_RMID);
     }
 }
