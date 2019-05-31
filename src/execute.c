@@ -17,7 +17,7 @@
 // Macros:
 #define CONTEXT "Execute"
 #define ARG_DELAY 1     // Delay position in argv.
-#define ARG_EXE 2       // Executable position in argv.
+#define ARG_EXE 2       // Executable name position in argv.
 
 // Main function:
 int main(int argc, char **argv){
@@ -29,25 +29,28 @@ int main(int argc, char **argv){
   msg execute_msg;
   unsigned long delay;
 
-  // Argument handling:
+  // Check if the argument count is right:
   if(argc < 3) {
     error(CONTEXT,
           "Wrong argument count.\n\nUsage: ./execute <delay> <program_name> [program_args].\n");
     exit(COUNT_ARGS);
   }
 
+  // Check if the executable exists and if has the right permissions:
   if(access(argv[ARG_EXE], X_OK) < 0){
     error(CONTEXT,
           "The file %s does not exist or you don't have needed permissions!\n",
           argv[ARG_EXE]);
-    exit(FILE_ERROR);
+    exit(INVALID_ARG);
   }
 
+  // Check if the delay value is valid:
   delay = strtoul(argv[ARG_DELAY], &err_check, 0);
-    if(argv[ARG_DELAY] == err_check || argv[ARG_DELAY][0] == '-'){
-      error(CONTEXT,
-            "Unable to decode delay value!\n");
-      exit(INVALID_ARG);
+
+  if(argv[ARG_DELAY] == err_check || argv[ARG_DELAY][0] == '-'){
+    error(CONTEXT,
+          "Unable to decode delay value!\n");
+    exit(INVALID_ARG);
   }
 
   // Acquire the message queue id:
