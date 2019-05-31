@@ -1,5 +1,12 @@
 // Program scheduler - Shutdown process.
 
+/* Code authors:
+ * André Filipe Caldas Laranjeira - 16/0023777
+ * Hugo Nascimento Fonseca - 16/0008166
+ * José Luiz Gomes Nogueira - 16/0032458
+ * Victor André Gris Costa - 16/0019311
+ */
+
 // Compiler includes:
 #include <signal.h>
 #include <stdio.h>

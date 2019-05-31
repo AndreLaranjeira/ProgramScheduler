@@ -1,19 +1,24 @@
-// Program scheduler - scheduler process.
+// Program scheduler - Scheduler process.
+
+/* Code authors:
+ * André Filipe Caldas Laranjeira - 16/0023777
+ * Hugo Nascimento Fonseca - 16/0008166
+ * José Luiz Gomes Nogueira - 16/0032458
+ * Victor André Gris Costa - 16/0019311
+ */
 
 // Compiler includes:
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <errno.h>
-#include <signal.h>
-#include <sys/wait.h>
-#include <unistd.h>
 #include <float.h>
-
-// - To messages queues
-#include <sys/types.h>
+#include <signal.h>
+#include <string.h>
 #include <sys/ipc.h>
 #include <sys/msg.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <unistd.h>
 
 // Project includes:
 #include "console.h"
@@ -44,13 +49,13 @@ void panic_function();
 void set_panic_flag();
 void shutdown();
 
-// Structs:
+// Type definitions:
 typedef struct topology_name_function{
     char* name;
     int (*init)();
 }topology;
 
-// Global Variables
+// Global variables:
 pid_t nodes_pid[N_MAX_NODES];
 int msqid_top_level, msqid_nodes;
 int panic_flag = 0;
@@ -68,7 +73,7 @@ int occupied_nodes = 0, quant_nodes;
 // Main function:
 int main(int argc, char **argv){
 
-    // Variables declaration:
+    // Variable declaration:
     msg shutdown_info, received;
     msg_kind kind;
     return_codes returned_code;

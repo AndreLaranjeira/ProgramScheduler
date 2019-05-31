@@ -1,3 +1,13 @@
+// Program scheduler - Data structures module - Header file.
+
+/* Code authors:
+ * André Filipe Caldas Laranjeira - 16/0023777
+ * Hugo Nascimento Fonseca - 16/0008166
+ * José Luiz Gomes Nogueira - 16/0032458
+ * Victor André Gris Costa - 16/0019311
+ */
+
+// Header guard:
 #ifndef DATA_STRUCTURES_H_
 #define DATA_STRUCTURES_H_
 
