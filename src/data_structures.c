@@ -18,7 +18,6 @@ return_codes create_table(scheduler_table **table)
   (*table)->last = NULL;
   (*table)->last_job = -1;
   (*table)->next = NULL;
-  (*table)->next_alarm = time(NULL);
   return SUCCESS;
 }
 
@@ -41,12 +40,13 @@ return_codes add_table_item(scheduler_table *table, table_item item)
   aux->metrics_idx = 0;
   aux->job = ++(table->last_job);
   aux->start_time = item.start_time;
+  aux->arrival_time = item.arrival_time;
   aux->argc = item.argc;
   for(i = 0; i < DATA_PROGRAM_MAX_ARG_NUM; i++){
     strcpy(aux->argv[i], item.argv[i]);
   }
 
-  if ( table->first == NULL ) {
+  if (table->first == NULL) {
 
     aux->next = NULL;
 
@@ -54,7 +54,6 @@ return_codes add_table_item(scheduler_table *table, table_item item)
     table->last = aux;
     table->next = aux;
     table->count = 1;
-    table->next_alarm = aux->start_time;
   } else {
 
     if(item.start_time < table->first->start_time) {
