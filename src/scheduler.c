@@ -74,7 +74,7 @@ int occupied_nodes = 0, quant_nodes;
 int main(int argc, char **argv){
 
     // Variable declaration:
-    msg shutdown_info, received;
+    msg execute_info, shutdown_info, received;
     msg_kind kind;
     return_codes returned_code;
     int status;
@@ -128,6 +128,20 @@ int main(int argc, char **argv){
 
     // Send the message:
     if(msgsnd(msqid_top_level, &shutdown_info, sizeof(shutdown_info.data), 0)
+       == -1) {
+        error(CONTEXT,
+              "A message could not be sent! Please check your message queues.\n");
+        exit(IPC_MSG_QUEUE_SEND);
+    }
+
+    // We also need to send a message to the execute process to indicate the job
+    // number.
+    execute_info.recipient = QUEUE_ID_EXECUTE;
+    execute_info.data.type = KIND_JOB;
+    execute_info.data.msg_body.data_job.job_num = FIRST_JOB_NUM;
+
+    // Send the message:
+    if(msgsnd(msqid_top_level, &execute_info, sizeof(execute_info.data), 0)
        == -1) {
         error(CONTEXT,
               "A message could not be sent! Please check your message queues.\n");
@@ -477,6 +491,8 @@ return_codes add_table(msg_data received)
     table_item item;
     int i;
     return_codes status;
+
+    item.job = extracted.job;
     item.argc = extracted.argc;
     for(i = 0; i < DATA_PROGRAM_MAX_ARG_NUM; i++){
         strcpy(item.argv[i], extracted.argv[i]);
@@ -485,7 +501,7 @@ return_codes add_table(msg_data received)
     item.start_time = time(NULL) + (time_t)extracted.delay;
     add_table_item(process_table, item);
 
-    print_table(process_table);
+    // print_table(process_table);
 
     return SUCCESS;
 }

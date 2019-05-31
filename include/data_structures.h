@@ -32,7 +32,7 @@
 // This helps processes to know which message is for them and
 // how to send message to another process
 #define QUEUE_ID_NODE(id) ((id)+4)
-#define QUEUE_ID_EXEC (2)
+#define QUEUE_ID_EXECUTE (2)
 #define QUEUE_ID_SHUTDOWN (3)
 #define QUEUE_ID_SCHEDULER (1)
 
@@ -64,6 +64,9 @@
 #define DATA_PROGRAM_MAX_ARG_NUM 20
 #define DATA_PROGRAM_MAX_ARG_LEN 20
 
+// Job control macros:
+#define FIRST_JOB_NUM (1)
+
 // Type definitions:
 typedef enum tf{False, True} boolean;
 
@@ -84,6 +87,7 @@ typedef enum returns{
     ABORT_RECEIVED,
     NO_JOB_ON_TABLE_ERROR,
     UNKNOWN_SCHEDULER_PID,
+    UNKNOWN_JOB_NUMBER,
     UNKNOWN_ERROR
 }return_codes;
 
@@ -112,12 +116,18 @@ typedef struct message_data_pid {
   pid_t pid;        // PID from the sender.
 } msg_data_pid;
 
+// Data informing a job number:
+typedef struct message_data_job {
+  int32_t job_num;
+} msg_data_job;
+
 // Enumerate types of messages:
 typedef enum message_kind {
   KIND_ERROR,
   KIND_PROGRAM,
   KIND_METRICS,
-  KIND_PID
+  KIND_PID,
+  KIND_JOB
 }msg_kind;
 
 // Define general message data structure:
@@ -128,6 +138,7 @@ typedef struct message_data {
     msg_data_program data_prog; // For queueing and starting programs and
     msg_data_metrics data_metrics; // For sending metrics from the nodes to the scheduler
     msg_data_pid data_pid; // For sending a process' PID to another process.
+    msg_data_job data_job; // For sending the next job number to another process.
   } msg_body;
 } msg_data;
 

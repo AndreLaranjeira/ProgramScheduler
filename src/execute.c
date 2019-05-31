@@ -32,8 +32,9 @@ int main(int argc, char **argv){
   // Variable declaration:
   char *err_check;
   int i;
+  int32_t job_num;
   key_t msqid;
-  msg execute_msg;
+  msg execute_msg, job_msg;
   unsigned long delay;
 
   // Check if the argument count is right:
@@ -69,10 +70,37 @@ int main(int argc, char **argv){
     exit(SCHEDULER_DOWN);
   }
 
-  // Write the message adequately:
+  // Acquire the current job number from the message queue (wait if necessary):
+  if(msgrcv(msqid, &job_msg, sizeof(job_msg.data), QUEUE_ID_EXECUTE, 0) == -1) {
+    error(CONTEXT, "Did not receive the next job number! Please try again.\n");
+    exit(UNKNOWN_JOB_NUMBER);
+  }
+
+  // Check if we have the right kind of message:
+  if(job_msg.data.type != KIND_JOB) {
+    error(CONTEXT, "Did not receive the next job number! Please try again.\n");
+    exit(UNKNOWN_JOB_NUMBER);
+  }
+
+  // Save the current job number:
+  job_num = job_msg.data.msg_body.data_job.job_num;
+
+  // Write another job message for the next execute call:
+  job_msg.recipient = QUEUE_ID_EXECUTE;
+  job_msg.data.type = KIND_JOB;
+  job_msg.data.msg_body.data_job.job_num = job_num + 1;
+
+  // Send the next job message:
+  if(msgsnd(msqid, &job_msg, sizeof(job_msg.data), 0) == -1) {
+    error(CONTEXT,
+          "The message could not be sent! Please check your message queues.\n");
+    exit(IPC_MSG_QUEUE_SEND);
+  }
+
+  // Write the execute message adequately:
   execute_msg.recipient = QUEUE_ID_SCHEDULER;
   execute_msg.data.type = KIND_PROGRAM;
-  execute_msg.data.msg_body.data_prog.job = -1;
+  execute_msg.data.msg_body.data_prog.job = job_num;
   execute_msg.data.msg_body.data_prog.delay = delay;
   execute_msg.data.msg_body.data_prog.argc = argc-2;
 
@@ -81,7 +109,7 @@ int main(int argc, char **argv){
   for(i = 0; i < argc-2; i++)
     strcpy(execute_msg.data.msg_body.data_prog.argv[i], argv[i+ARG_EXE]);
 
-  // Send the message:
+  // Send the execute message:
   if(msgsnd(msqid, &execute_msg, sizeof(execute_msg.data), 0) == -1) {
     error(CONTEXT,
           "The message could not be sent! Please check your message queues.\n");
@@ -90,8 +118,8 @@ int main(int argc, char **argv){
 
   // Notify the user:
   success(CONTEXT,
-          "Program '%s' scheduled for execution with %d arguments in at least %u seconds!\n",
-          argv[ARG_EXE], argc-2, delay);
+          "Job %d scheduled for execution!\n >> Program: %s\n >> Argument count: %d\n >> Delay: %u seconds!\n\n",
+          job_num, argv[ARG_EXE], argc-2, delay);
 
   return 0;
 

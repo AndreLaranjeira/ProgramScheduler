@@ -47,7 +47,7 @@ return_codes add_table_item(scheduler_table *table, table_item item)
 
   aux->done = False;
   aux->metrics_idx = 0;
-  aux->job = ++(table->last_job);
+  aux->job = item.job;
   aux->start_time = item.start_time;
   aux->arrival_time = item.arrival_time;
   aux->argc = item.argc;
@@ -89,6 +89,8 @@ return_codes add_table_item(scheduler_table *table, table_item item)
       table->next = table->next->next;
     }
   }
+
+  table->last_job++;  // Update the table job count!
 
   return SUCCESS;
 }
