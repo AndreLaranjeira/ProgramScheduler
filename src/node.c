@@ -123,6 +123,7 @@ int handle_program(msg request){
     int ret_state;                  // Variable to wait child process (return value)
     int pid;                        // PID of child process
     msg metrics;                    // Message to hold the running process statistics
+    msg queue_listening;            // Message to clear 'postal box'
     time_t rawtime;                 // Variable to grab current CPU time
     int answer = True;              // Control variable to continue the execution
 
@@ -160,7 +161,6 @@ int handle_program(msg request){
                 argv[i] = (char *) &(request.data.msg_body.data_prog.argv[i]);
             argv[request.data.msg_body.data_prog.argc] = (char *) NULL;
 
-            /*TODO: Fix the execvp system call*/
             // execvp(full_path_of_executable, argv); argv[0] = full_path_of_executable
             execvp(argv[0], (char * const *) argv);
             printf("errno: %d\n", errno);                                                                               /* TODO: remove debug printing */
@@ -171,7 +171,14 @@ int handle_program(msg request){
         // Father process will wait for it's son and gather remaining metrics
         else if (pid > 0) {
             // Wait for child process to finish
-            wait(&ret_state);
+            // Now, we're trying to receive return state of child while dealing with the 'postal box'
+            while(waitpid(pid, &ret_state, WNOHANG) == -1){
+                while(msgrcv(msq_id, &queue_listening, sizeof(queue_listening.data), node_id, IPC_NOWAIT) == 0){
+                    if(queue_listening.data.type == KIND_METRICS){
+                        handle_metrics(queue_listening);
+                    }
+                }
+            }
 
             // Captures the finish time
             time(&rawtime);
@@ -182,7 +189,7 @@ int handle_program(msg request){
 
             // Sets message type to metrics
             metrics.data.type = KIND_METRICS;
-            printf("Nó %d está com as métricas prontas!\n", node_id-4);
+            printf("Nó %d está com as métricas prontas!\n", node_id-4);                                                 /* TODO: remove debug printing */
 
             // Send the message to the lower node
             metrics.recipient = adjacent_nodes[1];
