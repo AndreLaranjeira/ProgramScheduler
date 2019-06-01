@@ -28,32 +28,34 @@
 #define CONTEXT "Scheduler"
 #define NODE_PROGRAM "node"
 
-// Function headers:
-void initialize_msg_queues();
-void destroy_msg_queues();
-
-int init_hypercube_topology();
-int init_torus_topology();
-int init_tree_topology();
-
-boolean is_a_job_ready();
-boolean is_no_job_executing();
-msg_kind get_message(int msqid, msg *message_received);
-return_codes execute_next_job(int msqid);
-return_codes add_table(msg_data received);
-return_codes save_metrics(msg_data received);
-return_codes treat_message(msg received, msg_kind kind);
-return_codes print_metrics(scheduler_table* table);
-
-void panic_function();
-void set_panic_flag();
-void shutdown();
-
 // Type definitions:
 typedef struct topology_name_function{
     char* name;
     int (*init)();
 }topology;
+
+// Function headers:
+boolean is_a_job_ready();
+boolean is_no_job_executing();
+
+int init_hypercube_topology();
+int init_torus_topology();
+int init_tree_topology();
+
+msg_kind get_message(int msqid, msg *message_received);
+
+return_codes add_table(msg_data received);
+return_codes execute_next_job(int msqid);
+return_codes print_metrics(scheduler_table* table);
+return_codes save_metrics(msg_data received);
+return_codes treat_message(msg received, msg_kind kind);
+
+void destroy_msg_queues();
+void fork_nodes(char *const [N_MAX_NODES][N_MAX_PARAMS], int);
+void initialize_msg_queues();
+void panic_function();
+void set_panic_flag();
+void shutdown();
 
 // Global variables:
 pid_t nodes_pid[N_MAX_NODES];
@@ -208,79 +210,23 @@ int main(int argc, char **argv){
     // Clean up the message queues:
     destroy_msg_queues();
 
+    // Success message:
+    success(CONTEXT, "Scheduler successfully shut down!");
+
     return 0;
 }
 
-// Function to set panic flag:
-void set_panic_flag() {
-    panic_flag = 1;
-}
-
-/**
- * If something goes wrong at creation of the nodes
- * this function will kill all created nodes
- * finalize the queues messages and exit
- * */
-void panic_function(){
-
-    int count_killed_nodes = 0;
-    int status;
-
-    // Kill all created nodes
-    for(int i=0; i<N_MAX_NODES; i++){
-        if(nodes_pid[i] != 0){
-            kill(nodes_pid[i], SIGTERM);  // Must not be SIGABRT!
-            count_killed_nodes++;
-        }
-    }
-
-    // wait for killed nodes
-    for(int i=0; i<count_killed_nodes; i++){
-        wait(&status);
-    }
-
-    // Clean up the message queues:
-    destroy_msg_queues();
-
-    error(CONTEXT,
-          "something went wrong at creation of nodes, please check if 'node' program file are in the same"
-          "place of the scheduler program\n");
-
-    exit(EXEC_FAILED);
-}
-
-
-/**
- * Create the 'nodes' process 'n_nodes' times
- * and if something goes wrong at creation sends a SIGABRT
- * to parent (scheduler) to kill all nodes created
- * */
-void fork_nodes(char *const nodes[N_MAX_NODES][N_MAX_PARAMS], int n_nodes){
-
-    // Parent pid
-    pid_t ppid = getpid();
-    char program_path[128] = "./";
-    strcat(program_path, NODE_PROGRAM);
-
-    // Initialize all the pids with 0
-    for(int i=0; i < N_MAX_NODES; i++) nodes_pid[i]=0;
-
-    for(int i=0; i<n_nodes; i++){
-        nodes_pid[i] = fork();
-
-        if(nodes_pid[i] == 0){
-            execvp(program_path, nodes[i]);
-            kill(ppid, SIGABRT);
-            exit(-1);
-        }
-    }
-
-    if(panic_flag == 1)
-        panic_function();
-
-}
-
 // Function implementations:
+boolean is_a_job_ready() {
+    return process_table != NULL && process_table->next != NULL && time(NULL) > process_table->next->start_time;
+}
+
+boolean is_no_job_executing() {
+    return actual_job == -1 && occupied_nodes == 0;
+}
+
+// Topology initialization functions:
+
 int init_hypercube_topology(){
     int n_nodes = 16;
     quant_nodes = n_nodes;
@@ -367,75 +313,34 @@ int init_tree_topology(){
     return 0;
 }
 
-void initialize_msg_queues(){
-
-    // Acquire the top level message queue:
-    msqid_top_level = msgget(QUEUE_TOP_LEVEL, IPC_CREAT|0x1FF);
-
-    // Acquire the nodes message queue:
-    msqid_nodes = msgget(QUEUE_NODES, IPC_CREAT|0x1FF);
-
-    if((msqid_top_level != -1) && (msqid_nodes != -1)){
-        info(CONTEXT,
-             "Scheduler message queues created with success!\n");
-    }else{
-        error(CONTEXT,
-              "An error occur trying to create a message queue!\n");
-        exit(IPC_MSG_QUEUE_CREAT);
-    }
-
-}
-
-void destroy_msg_queues(){
-
-    int status1, status2;
-
-    // Destroy the top level message queue:
-    status1 = msgctl(msqid_top_level, IPC_RMID, NULL);
-
-    // Destroy the nodes message queue:
-    status2 = msgctl(msqid_nodes, IPC_RMID, NULL);
-
-    // Now, I'm sure you are wondering: why save the return status into
-    // variables? Can't I just execute these commands inside the if conditional
-    // clause?
-    //
-    // The answer is simple: C implements smart evaluation for the "&&"
-    // and "||" logical operation. That means that if the first destruction
-    // fails inside an "&&" conditional clause, the second destruction command
-    // is NEVER EXECUTED because the condition will always evaluate to 0.
-    //
-    // Hence, these status variables are always needed! You learn something new
-    // everyday.
-    //
-    // TL;DR: DO NOT PUT THOSE STATEMENTS IN A CONDITIONAL CLAUSE!!!
-
-    if((status1 != -1) && (status2 != -1)){
-        info(CONTEXT,
-             "Scheduler message queues destroyed with success!\n");
-    }else{
-        error(CONTEXT,
-              "An error occurred while trying to destroy a message queue!\n");
-        exit(IPC_MSG_QUEUE_RMID);
-    }
-}
-
-boolean is_a_job_ready()
-{
-    return process_table != NULL && process_table->next != NULL && time(NULL) > process_table->next->start_time;
-}
-
-boolean is_no_job_executing()
-{
-    return actual_job == -1 && occupied_nodes == 0;
-}
-
 msg_kind get_message(int msqid, msg *message_received)
 {
     if (msgrcv(msqid, message_received, sizeof(message_received->data), QUEUE_ID_SCHEDULER, IPC_NOWAIT) == -1){
         return KIND_ERROR;
     }
     return message_received->data.type;
+}
+
+return_codes add_table(msg_data received)
+{
+    msg_data_program extracted = received.msg_body.data_prog;
+    table_item item;
+    int i;
+
+    item.job = extracted.job;
+    item.argc = extracted.argc;
+    for(i = 0; i < MAX_ARG_NUM; i++){
+        strcpy(item.argv[i], extracted.argv[i]);
+    }
+    item.arrival_time = time(NULL);
+    item.start_time = time(NULL) + (time_t)extracted.delay;
+    add_table_item(process_table, item);
+
+    #if DEBUG_LEVEL >= 2
+      print_table(process_table);
+    #endif
+
+    return SUCCESS;
 }
 
 return_codes execute_next_job(int msqid)
@@ -451,7 +356,9 @@ return_codes execute_next_job(int msqid)
     msg to_send;
     int i;
 
-    // printf("Executando job %d\n", process_table->next->job);
+    #if DEBUG_LEVEL >= 1
+      printf("\nStarting the next job\n>> Job: %d\n>> File: %s\n", process_table->next->job, process_table->next->argv[0]);
+    #endif
 
     /* Gravo valores de controle */
     process_table->next->done = True;
@@ -483,63 +390,6 @@ return_codes execute_next_job(int msqid)
     }
 
     return SUCCESS;
-}
-
-return_codes add_table(msg_data received)
-{
-    msg_data_program extracted = received.msg_body.data_prog;
-    table_item item;
-    return_codes status;
-    int i;
-
-    item.job = extracted.job;
-    item.argc = extracted.argc;
-    for(i = 0; i < MAX_ARG_NUM; i++){
-      strcpy(item.argv[i], extracted.argv[i]);
-    }
-    item.arrival_time = time(NULL);
-    item.start_time = time(NULL) + (time_t)extracted.delay;
-    status = add_table_item(process_table, item);
-    print_table(process_table);
-
-    return status;
-}
-
-return_codes save_metrics(msg_data received)
-{
-    table_item *aux;
-    aux = process_table->first;
-    while(aux != NULL && aux->node_job != received.msg_body.data_metrics.job) {
-        aux = aux->next;
-    }
-    if (aux == NULL) {
-        return NO_JOB_ON_TABLE_ERROR;
-    }
-    aux->metrics[aux->metrics_idx++] = received.msg_body.data_metrics;
-    info(CONTEXT, "Recebida métrica do job %d. Faltam %d métricas.\n", actual_job, occupied_nodes-1);
-    if((--occupied_nodes) == 0) {
-        actual_job = -1;
-    }
-    return SUCCESS;
-}
-
-return_codes treat_message(msg received, msg_kind kind)
-{
-    switch (kind)
-    {
-        case KIND_PROGRAM:
-            add_table(received.data);
-            break;
-
-        case KIND_METRICS:
-            save_metrics(received.data);
-            break;
-
-        case KIND_PID:
-        case KIND_ERROR:
-        default:
-            return INVALID_ARG;
-    }
 }
 
 return_codes print_metrics(scheduler_table* table)
@@ -640,6 +490,167 @@ return_codes print_metrics(scheduler_table* table)
 
     }
     return SUCCESS;
+}
+
+return_codes save_metrics(msg_data received)
+{
+    table_item *aux;
+    aux = process_table->first;
+    while(aux != NULL && aux->node_job != received.msg_body.data_metrics.job) {
+        aux = aux->next;
+    }
+    if (aux == NULL) {
+        return NO_JOB_ON_TABLE_ERROR;
+    }
+    aux->metrics[aux->metrics_idx++] = received.msg_body.data_metrics;
+
+    #if DEBUG_LEVEL >= 2
+      info(CONTEXT, "Recebida métrica do job %d. Faltam %d métricas.\n", actual_job, occupied_nodes-1);
+    #endif
+
+    if((--occupied_nodes) == 0) {
+        actual_job = -1;
+    }
+    return SUCCESS;
+}
+
+return_codes treat_message(msg received, msg_kind kind)
+{
+    switch (kind)
+    {
+        case KIND_PROGRAM:
+            add_table(received.data);
+            break;
+
+        case KIND_METRICS:
+            save_metrics(received.data);
+            break;
+
+        case KIND_PID:
+        case KIND_ERROR:
+        default:
+            return INVALID_ARG;
+    }
+}
+
+void destroy_msg_queues(){
+
+    int status1, status2;
+
+    // Destroy the top level message queue:
+    status1 = msgctl(msqid_top_level, IPC_RMID, NULL);
+
+    // Destroy the nodes message queue:
+    status2 = msgctl(msqid_nodes, IPC_RMID, NULL);
+
+    // Now, I'm sure you are wondering: why save the return status into
+    // variables? Can't I just execute these commands inside the if conditional
+    // clause?
+    //
+    // The answer is simple: C implements smart evaluation for the "&&"
+    // and "||" logical operation. That means that if the first destruction
+    // fails inside an "&&" conditional clause, the second destruction command
+    // is NEVER EXECUTED because the condition will always evaluate to 0.
+    //
+    // Hence, these status variables are always needed! You learn something new
+    // everyday.
+    //
+    // TL;DR: DO NOT PUT THOSE STATEMENTS IN A CONDITIONAL CLAUSE!!!
+
+    if((status1 != -1) && (status2 != -1)){
+        info(CONTEXT,
+             "Scheduler message queues destroyed with success!\n");
+    }else{
+        error(CONTEXT,
+              "An error occurred while trying to destroy a message queue!\n");
+        exit(IPC_MSG_QUEUE_RMID);
+    }
+}
+
+/**
+ * Create the 'nodes' process 'n_nodes' times
+ * and if something goes wrong at creation sends a SIGABRT
+ * to parent (scheduler) to kill all nodes created
+ * */
+void fork_nodes(char *const nodes[N_MAX_NODES][N_MAX_PARAMS], int n_nodes){
+
+    // Parent pid
+    pid_t ppid = getpid();
+    char program_path[128] = "./";
+    strcat(program_path, NODE_PROGRAM);
+
+    // Initialize all the pids with 0
+    for(int i=0; i < N_MAX_NODES; i++) nodes_pid[i]=0;
+
+    for(int i=0; i<n_nodes; i++){
+        nodes_pid[i] = fork();
+
+        if(nodes_pid[i] == 0){
+            execvp(program_path, nodes[i]);
+            kill(ppid, SIGABRT);
+            exit(-1);
+        }
+    }
+
+    if(panic_flag == 1)
+        panic_function();
+
+}
+
+void initialize_msg_queues(){
+
+    // Acquire the top level message queue:
+    msqid_top_level = msgget(QUEUE_TOP_LEVEL, IPC_CREAT|0x1FF);
+
+    // Acquire the nodes message queue:
+    msqid_nodes = msgget(QUEUE_NODES, IPC_CREAT|0x1FF);
+
+    if((msqid_top_level != -1) && (msqid_nodes != -1)){
+        info(CONTEXT,
+             "Scheduler message queues created with success!\n");
+    }else{
+        error(CONTEXT,
+              "An error occur trying to create a message queue!\n");
+        exit(IPC_MSG_QUEUE_CREAT);
+    }
+
+}
+
+/**
+ * If something goes wrong at creation of the nodes
+ * this function will kill all created nodes
+ * finalize the queues messages and exit
+ * */
+void panic_function(){
+
+    int count_killed_nodes = 0;
+    int status;
+
+    // Kill all created nodes
+    for(int i=0; i<N_MAX_NODES; i++){
+        if(nodes_pid[i] != 0){
+            kill(nodes_pid[i], SIGTERM);  // Must not be SIGABRT!
+            count_killed_nodes++;
+        }
+    }
+
+    // wait for killed nodes
+    for(int i=0; i<count_killed_nodes; i++){
+        wait(&status);
+    }
+
+    // Clean up the message queues:
+    destroy_msg_queues();
+
+    error(CONTEXT,
+          "something went wrong at creation of nodes, please check if 'node' program file are in the same"
+          "place of the scheduler program\n");
+
+    exit(EXEC_FAILED);
+}
+
+void set_panic_flag() {
+    panic_flag = 1;
 }
 
 void shutdown() {
