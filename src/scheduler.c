@@ -1,19 +1,24 @@
-// Program scheduler - scheduler process.
+// Program scheduler - Scheduler process.
+
+/* Code authors:
+ * André Filipe Caldas Laranjeira - 16/0023777
+ * Hugo Nascimento Fonseca - 16/0008166
+ * José Luiz Gomes Nogueira - 16/0032458
+ * Victor André Gris Costa - 16/0019311
+ */
 
 // Compiler includes:
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <errno.h>
-#include <signal.h>
-#include <sys/wait.h>
-#include <unistd.h>
 #include <float.h>
-
-// - To messages queues
-#include <sys/types.h>
+#include <signal.h>
+#include <string.h>
 #include <sys/ipc.h>
 #include <sys/msg.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <unistd.h>
 
 // Project includes:
 #include "console.h"
@@ -21,16 +26,11 @@
 
 // Macros:
 #define CONTEXT "Scheduler"
-#define END_PARAMS (char*) NULL
-#define N_MAX_PARAMS 8
-#define N_MAX_NODES 16
 #define NODE_PROGRAM "node"
 
 // Function headers:
-void initialize_msq_top_level();
-void initialize_msq_nodes();
-void destroy_msq_top_level();
-void destroy_msq_nodes();
+void initialize_msg_queues();
+void destroy_msg_queues();
 
 int init_hypercube_topology();
 int init_torus_topology();
@@ -49,13 +49,13 @@ void panic_function();
 void set_panic_flag();
 void shutdown();
 
-// Structs:
+// Type definitions:
 typedef struct topology_name_function{
     char* name;
     int (*init)();
 }topology;
 
-// Global Variables
+// Global variables:
 pid_t nodes_pid[N_MAX_NODES];
 int msqid_top_level, msqid_nodes;
 int panic_flag = 0;
@@ -73,8 +73,8 @@ int occupied_nodes = 0, quant_nodes;
 // Main function:
 int main(int argc, char **argv){
 
-    // Variables declaration:
-    msg shutdown_info, received;
+    // Variable declaration:
+    msg execute_info, shutdown_info, received;
     msg_kind kind;
     return_codes returned_code;
     int status;
@@ -114,11 +114,8 @@ int main(int argc, char **argv){
         exit(INVALID_ARG);
     }
 
-    // Create messages queue for shutdown, execute and scheduler to communicate
-    initialize_msq_top_level();
-
-    // Create messages queue for nodes and scheduler to communicate
-    initialize_msq_nodes();
+    // Create messages queues needed for the application:
+    initialize_msg_queues();
 
     // First things first. The shutdown process needs to know this process' PID
     // to able to send a SIGTERM. So we will write a message informing our PID.
@@ -131,6 +128,20 @@ int main(int argc, char **argv){
 
     // Send the message:
     if(msgsnd(msqid_top_level, &shutdown_info, sizeof(shutdown_info.data), 0)
+       == -1) {
+        error(CONTEXT,
+              "A message could not be sent! Please check your message queues.\n");
+        exit(IPC_MSG_QUEUE_SEND);
+    }
+
+    // We also need to send a message to the execute process to indicate the job
+    // number.
+    execute_info.recipient = QUEUE_ID_EXECUTE;
+    execute_info.data.type = KIND_JOB;
+    execute_info.data.msg_body.data_job.job_num = FIRST_JOB_NUM;
+
+    // Send the message:
+    if(msgsnd(msqid_top_level, &execute_info, sizeof(execute_info.data), 0)
        == -1) {
         error(CONTEXT,
               "A message could not be sent! Please check your message queues.\n");
@@ -195,8 +206,7 @@ int main(int argc, char **argv){
     }
 
     // Clean up the message queues:
-    destroy_msq_top_level();
-    destroy_msq_nodes();
+    destroy_msg_queues();
 
     return 0;
 }
@@ -229,11 +239,8 @@ void panic_function(){
         wait(&status);
     }
 
-    // Destroy messages queue of shutdown, execute and scheduler
-    destroy_msq_top_level();
-
-    // Destroy messages queue of nodes and scheduler
-    destroy_msq_nodes();
+    // Clean up the message queues:
+    destroy_msg_queues();
 
     error(CONTEXT,
           "something went wrong at creation of nodes, please check if 'node' program file are in the same"
@@ -360,50 +367,55 @@ int init_tree_topology(){
     return 0;
 }
 
-void initialize_msq_top_level(){
+void initialize_msg_queues(){
 
-    if( (msqid_top_level = msgget(QUEUE_TOP_LEVEL, IPC_CREAT|0x1FF)) != -1 ){
+    // Acquire the top level message queue:
+    msqid_top_level = msgget(QUEUE_TOP_LEVEL, IPC_CREAT|0x1FF);
+
+    // Acquire the nodes message queue:
+    msqid_nodes = msgget(QUEUE_NODES, IPC_CREAT|0x1FF);
+
+    if((msqid_top_level != -1) && (msqid_nodes != -1)){
         info(CONTEXT,
-             "Messages queue for shutdown, execute and scheduler created with success!\n");
+             "Scheduler message queues created with success!\n");
     }else{
         error(CONTEXT,
-              "An error occur trying to create a messages queue for shutdown, execute and scheduler !\n");
+              "An error occur trying to create a message queue!\n");
         exit(IPC_MSG_QUEUE_CREAT);
     }
 
 }
 
-void initialize_msq_nodes(){
+void destroy_msg_queues(){
 
-    if( (msqid_nodes = msgget(QUEUE_NODES, IPC_CREAT|0x1FF)) != -1 ){
+    int status1, status2;
+
+    // Destroy the top level message queue:
+    status1 = msgctl(msqid_top_level, IPC_RMID, NULL);
+
+    // Destroy the nodes message queue:
+    status2 = msgctl(msqid_nodes, IPC_RMID, NULL);
+
+    // Now, I'm sure you are wondering: why save the return status into
+    // variables? Can't I just execute these commands inside the if conditional
+    // clause?
+    //
+    // The answer is simple: C implements smart evaluation for the "&&"
+    // and "||" logical operation. That means that if the first destruction
+    // fails inside an "&&" conditional clause, the second destruction command
+    // is NEVER EXECUTED because the condition will always evaluate to 0.
+    //
+    // Hence, these status variables are always needed! You learn something new
+    // everyday.
+    //
+    // TL;DR: DO NOT PUT THOSE STATEMENTS IN A CONDITIONAL CLAUSE!!!
+
+    if((status1 != -1) && (status2 != -1)){
         info(CONTEXT,
-             "Messages queue for nodes and scheduler created with success!\n");
+             "Scheduler message queues destroyed with success!\n");
     }else{
         error(CONTEXT,
-              "An error occur trying to create a messages queue for nodes and scheduler !\n");
-        exit(IPC_MSG_QUEUE_CREAT);
-    }
-
-}
-
-void destroy_msq_top_level(){
-    if(msgctl(msqid_top_level, IPC_RMID, NULL) != -1){
-        info(CONTEXT,
-             "Messages queue for shutdown, execute and scheduler destroyed with success!\n");
-    }else{
-        error(CONTEXT,
-              "An error occur trying to destroy a messages queue for shutdown, execute and scheduler !\n");
-        exit(IPC_MSG_QUEUE_RMID);
-    }
-}
-
-void destroy_msq_nodes(){
-    if(msgctl(msqid_nodes, IPC_RMID, NULL) != -1){
-        info(CONTEXT,
-             "Messages queue for nodes and scheduler destroyed with success!\n");
-    }else{
-        error(CONTEXT,
-              "An error occur trying to destroy a messages queue for nodes and scheduler !\n");
+              "An error occurred while trying to destroy a message queue!\n");
         exit(IPC_MSG_QUEUE_RMID);
     }
 }
@@ -478,7 +490,8 @@ return_codes add_table(msg_data received)
     msg_data_program extracted = received.msg_body.data_prog;
     table_item item;
     int i;
-    return_codes status;
+
+    item.job = extracted.job;
     item.argc = extracted.argc;
     for(i = 0; i < DATA_PROGRAM_MAX_ARG_NUM; i++){
         strcpy(item.argv[i], extracted.argv[i]);
@@ -487,7 +500,7 @@ return_codes add_table(msg_data received)
     item.start_time = time(NULL) + (time_t)extracted.delay;
     add_table_item(process_table, item);
 
-    print_table(process_table);
+    // print_table(process_table);
 
     return SUCCESS;
 }
