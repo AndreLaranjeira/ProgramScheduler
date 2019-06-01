@@ -490,7 +490,6 @@ return_codes add_table(msg_data received)
     msg_data_program extracted = received.msg_body.data_prog;
     table_item item;
     int i;
-    return_codes status;
 
     item.job = extracted.job;
     item.argc = extracted.argc;
