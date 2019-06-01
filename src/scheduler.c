@@ -336,7 +336,7 @@ return_codes add_table(msg_data received)
     item.start_time = time(NULL) + (time_t)extracted.delay;
     add_table_item(process_table, item);
 
-    #if DEBUG_LEVEL == 2
+    #if DEBUG_LEVEL >= 2
       print_table(process_table);
     #endif
 
@@ -356,8 +356,8 @@ return_codes execute_next_job(int msqid)
     msg to_send;
     int i;
 
-    #if DEBUG_LEVEL == 1
-    printf("\nStarting the next job\n>> Job: %d\n>> File: %s\n", process_table->next->job, process_table->next->argv[0]);
+    #if DEBUG_LEVEL >= 1
+      printf("\nStarting the next job\n>> Job: %d\n>> File: %s\n", process_table->next->job, process_table->next->argv[0]);
     #endif
 
     /* Gravo valores de controle */
@@ -504,7 +504,7 @@ return_codes save_metrics(msg_data received)
     }
     aux->metrics[aux->metrics_idx++] = received.msg_body.data_metrics;
 
-    #if DEBUG_LEVEL == 2
+    #if DEBUG_LEVEL >= 2
       info(CONTEXT, "Recebida métrica do job %d. Faltam %d métricas.\n", actual_job, occupied_nodes-1);
     #endif
 

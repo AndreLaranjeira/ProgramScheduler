@@ -137,8 +137,8 @@ int handle_program(msg request){
 
     // Eliminating duplicates by executing just higher job IDs
     if(request.data.msg_body.data_prog.job > last_init_job){
-        #if DEBUG_LEVEL == 1
-        printf("No %d recebeu pedido para o job %d\n", node_id, request.data.msg_body.data_prog.job);
+        #if DEBUG_LEVEL >= 2
+          printf("No %d recebeu pedido para o job %d\n", node_id, request.data.msg_body.data_prog.job);
         #endif
         // Broadcast execution message to neighbors
         for(int i = 1; i <= adjacent_nodes[0]; i++){
@@ -196,8 +196,8 @@ int handle_program(msg request){
             // Sets message type to metrics
             metrics.data.type = KIND_METRICS;
 
-            #if DEBUG_LEVEL == 1
-            printf("Nó %d está com as métricas prontas!\n", node_id);
+            #if DEBUG_LEVEL >= 1
+              printf("Nó %d está com as métricas prontas!\n", node_id);
             #endif
 
             // Send the message to the lower node
@@ -216,8 +216,8 @@ int handle_program(msg request){
 
 // Handles a metric message
 int handle_metrics(msg request){
-    #if DEBUG_LEVEL == 1
-    printf("No %d recebeu uma métrica\n", node_id);
+    #if DEBUG_LEVEL >= 2
+      printf("No %d recebeu uma métrica\n", node_id);
     #endif
 
     // last_init_job variable is updated at handle_program function
