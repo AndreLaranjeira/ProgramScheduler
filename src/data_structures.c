@@ -34,7 +34,7 @@ return_codes add_table_item(scheduler_table *table, table_item item)
   aux->start_time = item.start_time;
   aux->arrival_time = item.arrival_time;
   aux->argc = item.argc;
-  for(i = 0; i < DATA_PROGRAM_MAX_ARG_NUM; i++){
+  for(i = 0; i < MAX_ARG_NUM; i++){
     strcpy(aux->argv[i], item.argv[i]);
   }
 

@@ -61,8 +61,8 @@
 #define END_PARAMS (char*) NULL
 
 // Fixed argument number and length for the msg_data_program data type:
-#define DATA_PROGRAM_MAX_ARG_NUM 20
-#define DATA_PROGRAM_MAX_ARG_LEN 20
+#define MAX_ARG_NUM 20
+#define MAX_ARG_LEN 20
 
 // Job control macros:
 #define FIRST_JOB_NUM (1)
@@ -99,7 +99,7 @@ typedef struct message_data_program {
   int32_t job; //-1 for exec -> scheduler communication
   unsigned long delay; //Time in seconds to delay. Nodes ignore this
   int argc;
-  char argv[DATA_PROGRAM_MAX_ARG_NUM][DATA_PROGRAM_MAX_ARG_LEN];
+  char argv[MAX_ARG_NUM][MAX_ARG_LEN];
 } msg_data_program;
 
 // Data collected from each node for computing metrics:
@@ -156,7 +156,7 @@ typedef struct item {
   struct item *next;
   time_t start_time, actual_start_time, arrival_time;
   int argc;
-  char argv[DATA_PROGRAM_MAX_ARG_NUM][DATA_PROGRAM_MAX_ARG_LEN];
+  char argv[MAX_ARG_NUM][MAX_ARG_LEN];
 } table_item;
 
 //Scheduler table:
