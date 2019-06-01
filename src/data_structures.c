@@ -14,23 +14,6 @@
 #include <stdio.h>
 
 // Function implementations:
-return_codes create_table(scheduler_table **table)
-{
-  *table = (scheduler_table*) malloc(sizeof(scheduler_table));
-
-  if (*table == NULL) {
-    return ALLOC_ERROR;
-  }
-
-  (*table)->count = 0;
-  (*table)->first = NULL;
-  (*table)->last = NULL;
-  (*table)->last_job = -1;
-  (*table)->next = NULL;
-  return SUCCESS;
-}
-
-
 return_codes add_table_item(scheduler_table *table, table_item item)
 {
   table_item *aux, *aux2;
@@ -92,6 +75,22 @@ return_codes add_table_item(scheduler_table *table, table_item item)
 
   table->last_job++;  // Update the table job count!
 
+  return SUCCESS;
+}
+
+return_codes create_table(scheduler_table **table)
+{
+  *table = (scheduler_table*) malloc(sizeof(scheduler_table));
+
+  if (*table == NULL) {
+    return ALLOC_ERROR;
+  }
+
+  (*table)->count = 0;
+  (*table)->first = NULL;
+  (*table)->last = NULL;
+  (*table)->last_job = -1;
+  (*table)->next = NULL;
   return SUCCESS;
 }
 

@@ -169,8 +169,8 @@ typedef struct table{
 } scheduler_table;
 
 // Function headers:
-return_codes create_table(scheduler_table **table);
 return_codes add_table_item(scheduler_table *table, table_item item);
+return_codes create_table(scheduler_table **table);
 return_codes delete_table(scheduler_table **table);
 void print_table(scheduler_table *table);
 
