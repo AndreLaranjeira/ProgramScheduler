@@ -210,6 +210,9 @@ int main(int argc, char **argv){
     // Clean up the message queues:
     destroy_msg_queues();
 
+    // Success message:
+    success(CONTEXT, "Scheduler successfully shut down!");
+
     return 0;
 }
 
@@ -333,7 +336,8 @@ return_codes add_table(msg_data received)
     item.start_time = time(NULL) + (time_t)extracted.delay;
     add_table_item(process_table, item);
 
-    // print_table(process_table);
+    if(DEBUG_LEVEL > 0)
+      print_table(process_table);
 
     return SUCCESS;
 }
@@ -351,7 +355,8 @@ return_codes execute_next_job(int msqid)
     msg to_send;
     int i;
 
-    // printf("Executando job %d\n", process_table->next->job);
+    if(DEBUG_LEVEL > 0)
+      printf("Executando job %d\n", process_table->next->job);
 
     /* Gravo valores de controle */
     process_table->next->done = True;
@@ -496,7 +501,10 @@ return_codes save_metrics(msg_data received)
         return NO_JOB_ON_TABLE_ERROR;
     }
     aux->metrics[aux->metrics_idx++] = received.msg_body.data_metrics;
-    info(CONTEXT, "Recebida métrica do job %d. Faltam %d métricas.\n", actual_job, occupied_nodes-1);
+
+    if(DEBUG_LEVEL > 0)
+      info(CONTEXT, "Recebida métrica do job %d. Faltam %d métricas.\n", actual_job, occupied_nodes-1);
+
     if((--occupied_nodes) == 0) {
         actual_job = -1;
     }

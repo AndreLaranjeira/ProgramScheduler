@@ -22,7 +22,7 @@
 //   0: Print no debug messages.
 //   1: Print minor debug messages.
 //   2: Print major debug messages.
-#define DEBUG 0
+#define DEBUG_LEVEL 0
 
 // Define queue IDs:
 #define QUEUE_TOP_LEVEL (0x8166)
