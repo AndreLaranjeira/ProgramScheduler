@@ -1,18 +1,24 @@
-// Program scheduler - scheduler process.
+// Program scheduler - Scheduler process.
+
+/* Code authors:
+ * André Filipe Caldas Laranjeira - 16/0023777
+ * Hugo Nascimento Fonseca - 16/0008166
+ * José Luiz Gomes Nogueira - 16/0032458
+ * Victor André Gris Costa - 16/0019311
+ */
 
 // Compiler includes:
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <errno.h>
+#include <float.h>
 #include <signal.h>
-#include <sys/wait.h>
-#include <unistd.h>
-
-// - To messages queues
-#include <sys/types.h>
+#include <string.h>
 #include <sys/ipc.h>
 #include <sys/msg.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <unistd.h>
 
 // Project includes:
 #include "console.h"
@@ -20,16 +26,11 @@
 
 // Macros:
 #define CONTEXT "Scheduler"
-#define END_PARAMS (char*) NULL
-#define N_MAX_PARAMS 8
-#define N_MAX_NODES 16
 #define NODE_PROGRAM "node"
 
 // Function headers:
-void initialize_msq_top_level();
-void initialize_msq_nodes();
-void destroy_msq_top_level();
-void destroy_msq_nodes();
+void initialize_msg_queues();
+void destroy_msg_queues();
 
 int init_hypercube_topology();
 int init_torus_topology();
@@ -42,18 +43,19 @@ return_codes execute_next_job(int msqid);
 return_codes add_table(msg_data received);
 return_codes save_metrics(msg_data received);
 return_codes treat_message(msg received, msg_kind kind);
+return_codes print_metrics(scheduler_table* table);
 
 void panic_function();
 void set_panic_flag();
 void shutdown();
 
-// Structs:
+// Type definitions:
 typedef struct topology_name_function{
     char* name;
     int (*init)();
 }topology;
 
-// Global Variables
+// Global variables:
 pid_t nodes_pid[N_MAX_NODES];
 int msqid_top_level, msqid_nodes;
 int panic_flag = 0;
@@ -71,8 +73,8 @@ int occupied_nodes = 0, quant_nodes;
 // Main function:
 int main(int argc, char **argv){
 
-    // Variables declaration:
-    msg shutdown_info, received;
+    // Variable declaration:
+    msg execute_info, shutdown_info, received;
     msg_kind kind;
     return_codes returned_code;
     int status;
@@ -89,7 +91,7 @@ int main(int argc, char **argv){
     // Arguments number handling:
     if(argc != 2){
         error(CONTEXT,
-                "Wrong arguments number. \nUsage: ./scheduler <topologia>\n");
+              "Wrong arguments number. \nUsage: ./scheduler <topologia>\n");
         exit(COUNT_ARGS);
     }
 
@@ -112,11 +114,8 @@ int main(int argc, char **argv){
         exit(INVALID_ARG);
     }
 
-    // Create messages queue for shutdown, execute and scheduler to communicate
-    initialize_msq_top_level();
-
-    // Create messages queue for nodes and scheduler to communicate
-    initialize_msq_nodes();
+    // Create messages queues needed for the application:
+    initialize_msg_queues();
 
     // First things first. The shutdown process needs to know this process' PID
     // to able to send a SIGTERM. So we will write a message informing our PID.
@@ -130,9 +129,23 @@ int main(int argc, char **argv){
     // Send the message:
     if(msgsnd(msqid_top_level, &shutdown_info, sizeof(shutdown_info.data), 0)
        == -1) {
-      error(CONTEXT,
-            "A message could not be sent! Please check your message queues.\n");
-      exit(IPC_MSG_QUEUE_SEND);
+        error(CONTEXT,
+              "A message could not be sent! Please check your message queues.\n");
+        exit(IPC_MSG_QUEUE_SEND);
+    }
+
+    // We also need to send a message to the execute process to indicate the job
+    // number.
+    execute_info.recipient = QUEUE_ID_EXECUTE;
+    execute_info.data.type = KIND_JOB;
+    execute_info.data.msg_body.data_job.job_num = FIRST_JOB_NUM;
+
+    // Send the message:
+    if(msgsnd(msqid_top_level, &execute_info, sizeof(execute_info.data), 0)
+       == -1) {
+        error(CONTEXT,
+              "A message could not be sent! Please check your message queues.\n");
+        exit(IPC_MSG_QUEUE_SEND);
     }
 
     // Call the topology initialization
@@ -146,8 +159,17 @@ int main(int argc, char **argv){
 
 
     // Main loop
-    while(!received_shutdown) {
+    while(!received_shutdown || !is_no_job_executing()) {
 
+        // Scales jobs
+        if (!received_shutdown && is_a_job_ready() && is_no_job_executing()) {
+            returned_code = execute_next_job(msqid_nodes);
+            if ( returned_code != SUCCESS ) {
+                error(CONTEXT,
+                      "Couldn't execute a job when it was supposed to be possible.\n");
+                exit(returned_code);
+            }
+        }
         // Check for messages from exec
         kind = get_message(msqid_top_level, &received);
         if (kind != KIND_ERROR){
@@ -166,18 +188,9 @@ int main(int argc, char **argv){
                 exit(returned_code);
             }
         }
-        // Scales jobs
-        if (is_a_job_ready() && is_no_job_executing()) {
-            returned_code = execute_next_job(msqid_nodes);
-            if ( returned_code != SUCCESS ) {
-                error(CONTEXT,
-                "Couldn't execute a job when it was supposed to be possible.\n");
-                exit(returned_code);
-            }
-        }
     }
 
-    // TODO: process and print metrics here
+    print_metrics(process_table);
 
     // Delete process table
     if ((returned_code=delete_table(&process_table)) != SUCCESS) {
@@ -193,8 +206,7 @@ int main(int argc, char **argv){
     }
 
     // Clean up the message queues:
-    destroy_msq_top_level();
-    destroy_msq_nodes();
+    destroy_msg_queues();
 
     return 0;
 }
@@ -227,15 +239,12 @@ void panic_function(){
         wait(&status);
     }
 
-    // Destroy messages queue of shutdown, execute and scheduler
-    destroy_msq_top_level();
-
-    // Destroy messages queue of nodes and scheduler
-    destroy_msq_nodes();
+    // Clean up the message queues:
+    destroy_msg_queues();
 
     error(CONTEXT,
-            "something went wrong at creation of nodes, please check if 'node' program file are in the same"
-            "place of the scheduler program\n");
+          "something went wrong at creation of nodes, please check if 'node' program file are in the same"
+          "place of the scheduler program\n");
 
     exit(EXEC_FAILED);
 }
@@ -358,50 +367,55 @@ int init_tree_topology(){
     return 0;
 }
 
-void initialize_msq_top_level(){
+void initialize_msg_queues(){
 
-    if( (msqid_top_level = msgget(QUEUE_TOP_LEVEL, IPC_CREAT|0x1FF)) != -1 ){
+    // Acquire the top level message queue:
+    msqid_top_level = msgget(QUEUE_TOP_LEVEL, IPC_CREAT|0x1FF);
+
+    // Acquire the nodes message queue:
+    msqid_nodes = msgget(QUEUE_NODES, IPC_CREAT|0x1FF);
+
+    if((msqid_top_level != -1) && (msqid_nodes != -1)){
         info(CONTEXT,
-             "Messages queue for shutdown, execute and scheduler created with success!\n");
+             "Scheduler message queues created with success!\n");
     }else{
         error(CONTEXT,
-                "An error occur trying to create a messages queue for shutdown, execute and scheduler !\n");
+              "An error occur trying to create a message queue!\n");
         exit(IPC_MSG_QUEUE_CREAT);
     }
 
 }
 
-void initialize_msq_nodes(){
+void destroy_msg_queues(){
 
-    if( (msqid_nodes = msgget(QUEUE_NODES, IPC_CREAT|0x1FF)) != -1 ){
+    int status1, status2;
+
+    // Destroy the top level message queue:
+    status1 = msgctl(msqid_top_level, IPC_RMID, NULL);
+
+    // Destroy the nodes message queue:
+    status2 = msgctl(msqid_nodes, IPC_RMID, NULL);
+
+    // Now, I'm sure you are wondering: why save the return status into
+    // variables? Can't I just execute these commands inside the if conditional
+    // clause?
+    //
+    // The answer is simple: C implements smart evaluation for the "&&"
+    // and "||" logical operation. That means that if the first destruction
+    // fails inside an "&&" conditional clause, the second destruction command
+    // is NEVER EXECUTED because the condition will always evaluate to 0.
+    //
+    // Hence, these status variables are always needed! You learn something new
+    // everyday.
+    //
+    // TL;DR: DO NOT PUT THOSE STATEMENTS IN A CONDITIONAL CLAUSE!!!
+
+    if((status1 != -1) && (status2 != -1)){
         info(CONTEXT,
-             "Messages queue for nodes and scheduler created with success!\n");
+             "Scheduler message queues destroyed with success!\n");
     }else{
         error(CONTEXT,
-                "An error occur trying to create a messages queue for nodes and scheduler !\n");
-        exit(IPC_MSG_QUEUE_CREAT);
-    }
-
-}
-
-void destroy_msq_top_level(){
-    if(msgctl(msqid_top_level, IPC_RMID, NULL) != -1){
-        info(CONTEXT,
-             "Messages queue for shutdown, execute and scheduler destroyed with success!\n");
-    }else{
-        error(CONTEXT,
-                "An error occur trying to destroy a messages queue for shutdown, execute and scheduler !\n");
-        exit(IPC_MSG_QUEUE_RMID);
-    }
-}
-
-void destroy_msq_nodes(){
-    if(msgctl(msqid_nodes, IPC_RMID, NULL) != -1){
-        info(CONTEXT,
-             "Messages queue for nodes and scheduler destroyed with success!\n");
-    }else{
-        error(CONTEXT,
-                "An error occur trying to destroy a messages queue for nodes and scheduler !\n");
+              "An error occurred while trying to destroy a message queue!\n");
         exit(IPC_MSG_QUEUE_RMID);
     }
 }
@@ -465,7 +479,7 @@ return_codes execute_next_job(int msqid)
     /* Atualizo qual o próximo */
     process_table->next = process_table->first;
     while(process_table->next != NULL && process_table->next->done) {
-      process_table->next = process_table->next->next;
+        process_table->next = process_table->next->next;
     }
 
     return SUCCESS;
@@ -475,12 +489,15 @@ return_codes add_table(msg_data received)
 {
     msg_data_program extracted = received.msg_body.data_prog;
     table_item item;
-    int i;
     return_codes status;
+    int i;
+
+    item.job = extracted.job;
     item.argc = extracted.argc;
     for(i = 0; i < MAX_ARG_NUM; i++){
       strcpy(item.argv[i], extracted.argv[i]);
     }
+    item.arrival_time = time(NULL);
     item.start_time = time(NULL) + (time_t)extracted.delay;
     status = add_table_item(process_table, item);
     print_table(process_table);
@@ -490,12 +507,19 @@ return_codes add_table(msg_data received)
 
 return_codes save_metrics(msg_data received)
 {
-    info(CONTEXT, "Recebida métrica ");
-    printf("do job %d. ", actual_job);
+    table_item *aux;
+    aux = process_table->first;
+    while(aux != NULL && aux->node_job != received.msg_body.data_metrics.job) {
+        aux = aux->next;
+    }
+    if (aux == NULL) {
+        return NO_JOB_ON_TABLE_ERROR;
+    }
+    aux->metrics[aux->metrics_idx++] = received.msg_body.data_metrics;
+    info(CONTEXT, "Recebida métrica do job %d. Faltam %d métricas.\n", actual_job, occupied_nodes-1);
     if((--occupied_nodes) == 0) {
         actual_job = -1;
     }
-    printf("Faltam %d métricas.\n", occupied_nodes);
     return SUCCESS;
 }
 
@@ -503,19 +527,119 @@ return_codes treat_message(msg received, msg_kind kind)
 {
     switch (kind)
     {
-    case KIND_PROGRAM:
-        add_table(received.data);
-        break;
+        case KIND_PROGRAM:
+            add_table(received.data);
+            break;
 
-    case KIND_METRICS:
-        save_metrics(received.data);
-        break;
+        case KIND_METRICS:
+            save_metrics(received.data);
+            break;
 
-    case KIND_PID:
-    case KIND_ERROR:
-    default:
-        return INVALID_ARG;
+        case KIND_PID:
+        case KIND_ERROR:
+        default:
+            return INVALID_ARG;
     }
+}
+
+return_codes print_metrics(scheduler_table* table)
+{
+    int i;
+    table_item *aux;
+    aux = table->first;
+    int node_error;
+    char *some_time;
+    double time_aux, best_node_time_seconds;
+    time_t time_t_aux;
+    time_measure best_node_time, greatest_node_time, smallest_node_time;
+
+    while(aux != NULL){
+
+        // Print Job status
+        time_aux = difftime(aux->start_time, aux->arrival_time);
+        printf("Job: %3d | Done?: %s | Delay: %3.0lfs | ", aux->job, (aux->done ? "T":"F"), time_aux);
+
+        // Gets better time, greatest, smallest and verify if any error occurred at nodes
+        node_error = 0;
+        best_node_time_seconds = DBL_MAX;
+        smallest_node_time = aux->metrics[0].start_time;
+        greatest_node_time = aux->metrics[0].end_time;
+        for (i = 0; i < aux->metrics_idx; i++) {
+
+            // gets best time
+            time_aux = difftime(mktime(&aux->metrics[i].end_time), mktime(&aux->metrics[i].start_time));
+            if (time_aux < best_node_time_seconds) {
+                best_node_time_seconds = time_aux;
+                best_node_time = aux->metrics[i].end_time;
+            }
+
+            // get smallest time
+            time_aux = difftime(mktime(&smallest_node_time), mktime(&aux->metrics[i].start_time));
+            if(time_aux > 0){
+                smallest_node_time = aux->metrics[i].start_time;
+            }
+
+            // get greatest time
+            time_aux = difftime(mktime(&greatest_node_time), mktime(&aux->metrics[i].end_time));
+            if(time_aux < 0){
+                greatest_node_time = aux->metrics[i].end_time;
+            }
+
+            // check for errors in node
+            if (aux->metrics[i].return_code != 0) {
+                node_error = aux->metrics[i].return_code;
+                break;
+            }
+        }
+
+        if (node_error == 0 && aux->done) {
+
+            // Calculate and show Turnround Time
+            time_aux = difftime(mktime(&best_node_time), aux->arrival_time);
+            printf("Turnaround: %3.0lfs | ", time_aux);
+
+            // Calculate and show Scheduler Time
+            time_aux = difftime(mktime(&best_node_time), aux->actual_start_time);
+            printf("Scheduler Time: %3.0lfs | ", time_aux);
+
+            // Show Best Node Time
+            printf("Node Time: %3.0lfs | ", best_node_time_seconds);
+
+            // Show smallest node start Time
+            time_t_aux = mktime(&smallest_node_time);
+            some_time = ctime(&time_t_aux);
+            some_time[(int)strlen(some_time)-1] = '\0';
+            printf("Start Node: %s | ", some_time);
+
+            // Show greatest node start Time
+            time_t_aux = mktime(&greatest_node_time);
+            some_time = ctime(&time_t_aux);
+            some_time[(int)strlen(some_time)-1] = '\0';
+            printf("End Node: %s | ", some_time);
+
+            // Show node error
+            printf("Node error: %d | ", node_error);
+
+        }else{
+            printf("Turnaround: ---- | "
+                   "Scheduler Time: ---- | "
+                   "Node Time: ---- | "
+                   "Start Node: --- --- -- --:--:-- ---- | "
+                   "End Node: --- --- -- --:--:-- ---- | "
+                   "Node error: %d | ", node_error);
+        }
+
+        // Print Job command
+        printf("Comando: ");
+        for (i = 0; i < aux->argc; i++){
+            printf("%s ", aux->argv[i]);
+        }
+        printf("\n");
+
+        aux = aux->next;
+
+    }
+    return SUCCESS;
 }
 
 void shutdown() {

@@ -8,12 +8,20 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
+// Program scheduler - Node process.
+
+/* Code authors:
+ * André Filipe Caldas Laranjeira - 16/0023777
+ * Hugo Nascimento Fonseca - 16/0008166
+ * José Luiz Gomes Nogueira - 16/0032458
+ * Victor André Gris Costa - 16/0019311
+ */
 
 // Project includes:
 #include "console.h"
 #include "data_structures.h"
 
-// Macros
+// Macros:
 #define CONTEXT "Node"
 
 // Function prototypes
@@ -26,7 +34,7 @@ int node_id, msq_id;        // Node ID and IPC queue ID
 int *adjacent_nodes;        // Dinamically allocated array of integers to the adjacent nodes
 int last_init_job = 0;      // Holds the last run job ID
 
-
+// Main function:
 int main(int argc, char **argv){
 
     char *error_check;              // Pointer used to detect char to int conversion errors

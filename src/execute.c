@@ -1,5 +1,12 @@
 // Program scheduler - Execution process.
 
+/* Code authors:
+ * André Filipe Caldas Laranjeira - 16/0023777
+ * Hugo Nascimento Fonseca - 16/0008166
+ * José Luiz Gomes Nogueira - 16/0032458
+ * Victor André Gris Costa - 16/0019311
+ */
+
 // Compiler includes:
 #include <stdio.h>
 #include <stdlib.h>
@@ -16,6 +23,8 @@
 
 // Macros:
 #define CONTEXT "Execute"
+#define ARG_DELAY 1     // Delay position in argv.
+#define ARG_EXE 2       // Executable name position in argv.
 
 // Main function:
 int main(int argc, char **argv){
@@ -23,29 +32,33 @@ int main(int argc, char **argv){
   // Variable declaration:
   char *err_check;
   int i;
+  int32_t job_num;
   key_t msqid;
-  msg execute_msg;
+  msg execute_msg, job_msg;
   unsigned long delay;
 
-  // Argument handling:
+  // Check if the argument count is right:
   if(argc < 3) {
     error(CONTEXT,
-          "Wrong argument count.\n\nUsage: ./execute <program_name> [optional_args] <delay>.\n");
+          "Wrong argument count.\n\nUsage: ./execute <delay> <program_name> [program_args].\n");
     exit(COUNT_ARGS);
   }
 
-  if(access(argv[1], X_OK) < 0){
+  // Check if the executable exists and if has the right permissions:
+  if(access(argv[ARG_EXE], X_OK) < 0){
     error(CONTEXT,
           "The file %s does not exist or you don't have needed permissions!\n",
-          argv[1]);
-    exit(FILE_ERROR);
+          argv[ARG_EXE]);
+    exit(INVALID_ARG);
   }
 
-  delay = strtoul(argv[argc - 1], &err_check, 0);         // Delay is always the last argument.
-    if(argv[argc-1] == err_check || argv[argc-1][0] == '-'){
-      error(CONTEXT,
-            "Unable to decode delay value!\n");
-      exit(INVALID_ARG);
+  // Check if the delay value is valid:
+  delay = strtoul(argv[ARG_DELAY], &err_check, 0);
+
+  if(argv[ARG_DELAY] == err_check || argv[ARG_DELAY][0] == '-'){
+    error(CONTEXT,
+          "Unable to decode delay value!\n");
+    exit(INVALID_ARG);
   }
 
   // Acquire the message queue id:
@@ -57,19 +70,46 @@ int main(int argc, char **argv){
     exit(SCHEDULER_DOWN);
   }
 
-  // Write the message adequately:
+  // Acquire the current job number from the message queue (wait if necessary):
+  if(msgrcv(msqid, &job_msg, sizeof(job_msg.data), QUEUE_ID_EXECUTE, 0) == -1) {
+    error(CONTEXT, "Did not receive the next job number! Please try again.\n");
+    exit(UNKNOWN_JOB_NUMBER);
+  }
+
+  // Check if we have the right kind of message:
+  if(job_msg.data.type != KIND_JOB) {
+    error(CONTEXT, "Did not receive the next job number! Please try again.\n");
+    exit(UNKNOWN_JOB_NUMBER);
+  }
+
+  // Save the current job number:
+  job_num = job_msg.data.msg_body.data_job.job_num;
+
+  // Write another job message for the next execute call:
+  job_msg.recipient = QUEUE_ID_EXECUTE;
+  job_msg.data.type = KIND_JOB;
+  job_msg.data.msg_body.data_job.job_num = job_num + 1;
+
+  // Send the next job message:
+  if(msgsnd(msqid, &job_msg, sizeof(job_msg.data), 0) == -1) {
+    error(CONTEXT,
+          "The message could not be sent! Please check your message queues.\n");
+    exit(IPC_MSG_QUEUE_SEND);
+  }
+
+  // Write the execute message adequately:
   execute_msg.recipient = QUEUE_ID_SCHEDULER;
   execute_msg.data.type = KIND_PROGRAM;
-  execute_msg.data.msg_body.data_prog.job = -1;
+  execute_msg.data.msg_body.data_prog.job = job_num;
   execute_msg.data.msg_body.data_prog.delay = delay;
   execute_msg.data.msg_body.data_prog.argc = argc-2;
 
   // Copy the program arguments one by one:
-  // Note: The data program arguments begin at position 1 of argv.
+  // Note: The data program arguments begin at position ARG_EXE of argv.
   for(i = 0; i < argc-2; i++)
-    strcpy(execute_msg.data.msg_body.data_prog.argv[i], argv[i+1]);
+    strcpy(execute_msg.data.msg_body.data_prog.argv[i], argv[i+ARG_EXE]);
 
-  // Send the message:
+  // Send the execute message:
   if(msgsnd(msqid, &execute_msg, sizeof(execute_msg.data), 0) == -1) {
     error(CONTEXT,
           "The message could not be sent! Please check your message queues.\n");
@@ -78,8 +118,8 @@ int main(int argc, char **argv){
 
   // Notify the user:
   success(CONTEXT,
-          "Program '%s' scheduled for execution with %d arguments in at least %u seconds!\n",
-          argv[1], argc-2, delay);
+          "Job %d scheduled for execution!\n >> Program: %s\n >> Argument count: %d\n >> Delay: %u seconds!\n\n",
+          job_num, argv[ARG_EXE], argc-2, delay);
 
   return 0;
 
