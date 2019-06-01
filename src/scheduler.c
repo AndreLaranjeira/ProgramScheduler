@@ -329,15 +329,16 @@ return_codes add_table(msg_data received)
 
     item.job = extracted.job;
     item.argc = extracted.argc;
-    for(i = 0; i < DATA_PROGRAM_MAX_ARG_NUM; i++){
+    for(i = 0; i < MAX_ARG_NUM; i++){
         strcpy(item.argv[i], extracted.argv[i]);
     }
     item.arrival_time = time(NULL);
     item.start_time = time(NULL) + (time_t)extracted.delay;
     add_table_item(process_table, item);
 
-    if(DEBUG_LEVEL > 0)
+    #if DEBUG_LEVEL == 2
       print_table(process_table);
+    #endif
 
     return SUCCESS;
 }
@@ -355,8 +356,9 @@ return_codes execute_next_job(int msqid)
     msg to_send;
     int i;
 
-    if(DEBUG_LEVEL > 0)
-      printf("Executando job %d\n", process_table->next->job);
+    #if DEBUG_LEVEL == 1
+    printf("\nStarting the next job\n>> Job: %d\n>> File: %s\n", process_table->next->job, process_table->next->argv[0]);
+    #endif
 
     /* Gravo valores de controle */
     process_table->next->done = True;
@@ -373,7 +375,7 @@ return_codes execute_next_job(int msqid)
     to_send.data.msg_body.data_prog.argc = process_table->next->argc;
     to_send.data.msg_body.data_prog.job = process_table->next->node_job;
     to_send.data.msg_body.data_prog.delay = 0;
-    for ( i = 0; i < DATA_PROGRAM_MAX_ARG_NUM; i++ ) {
+    for ( i = 0; i < MAX_ARG_NUM; i++ ) {
         strcpy(to_send.data.msg_body.data_prog.argv[i],
                process_table->next->argv[i]);
     }
@@ -502,8 +504,9 @@ return_codes save_metrics(msg_data received)
     }
     aux->metrics[aux->metrics_idx++] = received.msg_body.data_metrics;
 
-    if(DEBUG_LEVEL > 0)
+    #if DEBUG_LEVEL == 2
       info(CONTEXT, "Recebida métrica do job %d. Faltam %d métricas.\n", actual_job, occupied_nodes-1);
+    #endif
 
     if((--occupied_nodes) == 0) {
         actual_job = -1;

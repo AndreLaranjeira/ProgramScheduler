@@ -1,13 +1,3 @@
-// Compiler includes:
-#include <errno.h>                                                      /*TODO: remove debug printing*/
-#include <stdlib.h>
-#include <string.h>
-#include <sys/ipc.h>
-#include <sys/msg.h>
-#include <sys/types.h>
-#include <sys/wait.h>
-#include <unistd.h>
-
 // Program scheduler - Node process.
 
 /* Code authors:
@@ -16,6 +6,15 @@
  * José Luiz Gomes Nogueira - 16/0032458
  * Victor André Gris Costa - 16/0019311
  */
+
+// Compiler includes:
+#include <stdlib.h>
+#include <string.h>
+#include <sys/ipc.h>
+#include <sys/msg.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <unistd.h>
 
 // Project includes:
 #include "console.h"
@@ -67,7 +66,7 @@ int main(int argc, char **argv){
     adjacent_nodes = (int *) malloc(sizeof(int));
     if(adjacent_nodes == NULL) {
         error(NULL, "[Node %d]: ran out of memory. Dynamic allocation failed.\n");
-        kill(getppid(), SIGABRT);
+        kill(getppid(), SIGINT);
     }
 
     adjacent_nodes[0] = 0;
@@ -77,7 +76,7 @@ int main(int argc, char **argv){
         adjacent_nodes = (int *) realloc(adjacent_nodes, sizeof(int)*(adjacent_nodes[0] + 2));
         if(adjacent_nodes == NULL){
             error(NULL, "[Node %d]: ran out of memory. Dynamic allocation failed.\n");
-            kill(getppid(), SIGABRT);
+            kill(getppid(), SIGINT);
         }
 
         adjacent_nodes[0]++;
@@ -113,7 +112,7 @@ int main(int argc, char **argv){
 
             default:
                 // Received a unknown message type
-                error(NULL, "[Node %d]: Unknown operation %d received. Ignoring message...\n", node_id, queue_listening.data.type);
+                warning(NULL, "[Node %d]: Unknown operation %d received. Ignoring message...\n", node_id, queue_listening.data.type);
                 break;
         }
     }
@@ -138,15 +137,14 @@ int handle_program(msg request){
 
     // Eliminating duplicates by executing just higher job IDs
     if(request.data.msg_body.data_prog.job > last_init_job){
-        printf("No %d recebeu pedido para o job %d\n", node_id-4, request.data.msg_body.data_prog.job);                 /* TODO: remove debug printing */
+        #if DEBUG_LEVEL == 1
+        printf("No %d recebeu pedido para o job %d\n", node_id, request.data.msg_body.data_prog.job);
+        #endif
         // Broadcast execution message to neighbors
         for(int i = 1; i <= adjacent_nodes[0]; i++){
             if(adjacent_nodes[i] != QUEUE_ID_SCHEDULER && adjacent_nodes[i] != request.recipient) {
                 request.recipient = adjacent_nodes[i];
-                if(msgsnd(msq_id, &request, sizeof(request.data), 0) == 0)                                              /* TODO: remove debug printing */
-                    printf("No %d broadcast para o nó %d\n", node_id-4, adjacent_nodes[i]-4);
-                else
-                    printf("No %d falhou no broadcast\n", node_id-4);
+                msgsnd(msq_id, &request, sizeof(request.data), 0);
             }
         }
 
@@ -172,8 +170,7 @@ int handle_program(msg request){
 
             // execvp(full_path_of_executable, argv); argv[0] = full_path_of_executable
             execvp(argv[0], (char * const *) argv);
-            printf("errno: %d\n", errno);                                                                               /* TODO: remove debug printing */
-            error(NULL, "[Node %d]: Node could not start required executable. Exiting with error code %d...\n", node_id-4,
+            error(NULL, "[Node %d]: Node could not start required executable %s. Exiting with error code %d...\n", node_id, argv[0],
                     EXEC_FAILED);
             exit(EXEC_FAILED);
         }
@@ -198,14 +195,14 @@ int handle_program(msg request){
 
             // Sets message type to metrics
             metrics.data.type = KIND_METRICS;
-            printf("Nó %d está com as métricas prontas!\n", node_id-4);
+
+            #if DEBUG_LEVEL == 1
+            printf("Nó %d está com as métricas prontas!\n", node_id);
+            #endif
 
             // Send the message to the lower node
             metrics.recipient = adjacent_nodes[1];
-            if(msgsnd(msq_id, &metrics, sizeof(metrics.data), 0) == 0)                                                  /* TODO: remove debug printing */
-                printf("No %d enviando métricas para o nó %d\n", node_id-4, adjacent_nodes[1]-4);
-            else
-                printf("No %d falhou ao retornar métricas\n", node_id-4);
+            msgsnd(msq_id, &metrics, sizeof(metrics.data), 0);
         }
         // Error while forking a new process, answer return will break the main loop
         else {
@@ -213,24 +210,22 @@ int handle_program(msg request){
             answer = FORK_ERROR;
         }
     }
-    else
-        printf("No %d recebeu pedido de programa ja executado\n", node_id-4);                                           /* TODO: remove debug printing */
 
     return answer;
 }
 
 // Handles a metric message
 int handle_metrics(msg request){
-    printf("No %d recebeu uma métrica\n", node_id-4);                                                                   /* TODO: remove debug printing */
+    #if DEBUG_LEVEL == 1
+    printf("No %d recebeu uma métrica\n", node_id);
+    #endif
+
     // last_init_job variable is updated at handle_program function
     if(request.data.msg_body.data_metrics.job >= last_init_job){
         // Gets the lower neighbor ID
         // Here I'm assuming that the scheduler ID is always lower than any node
         request.recipient = adjacent_nodes[1];
-        if(msgsnd(msq_id, &request, sizeof(request.data), 0) == 0)
-            printf("No %d encaminhou métricas para o no %d\n", node_id-4, adjacent_nodes[1]-4);                         /* TODO: remove debug printing */
-        else
-            printf("No %d falhou ao encaminhar métrica\n", node_id-4);
+        msgsnd(msq_id, &request, sizeof(request.data), 0);
     }
     // Return clause possible of expansion in future
     return True;
