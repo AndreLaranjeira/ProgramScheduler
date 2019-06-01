@@ -468,7 +468,7 @@ return_codes execute_next_job(int msqid)
     to_send.data.msg_body.data_prog.argc = process_table->next->argc;
     to_send.data.msg_body.data_prog.job = process_table->next->node_job;
     to_send.data.msg_body.data_prog.delay = 0;
-    for ( i = 0; i < DATA_PROGRAM_MAX_ARG_NUM; i++ ) {
+    for ( i = 0; i < MAX_ARG_NUM; i++ ) {
         strcpy(to_send.data.msg_body.data_prog.argv[i],
                process_table->next->argv[i]);
     }
@@ -489,20 +489,20 @@ return_codes add_table(msg_data received)
 {
     msg_data_program extracted = received.msg_body.data_prog;
     table_item item;
+    return_codes status;
     int i;
 
     item.job = extracted.job;
     item.argc = extracted.argc;
-    for(i = 0; i < DATA_PROGRAM_MAX_ARG_NUM; i++){
-        strcpy(item.argv[i], extracted.argv[i]);
+    for(i = 0; i < MAX_ARG_NUM; i++){
+      strcpy(item.argv[i], extracted.argv[i]);
     }
     item.arrival_time = time(NULL);
     item.start_time = time(NULL) + (time_t)extracted.delay;
-    add_table_item(process_table, item);
+    status = add_table_item(process_table, item);
+    print_table(process_table);
 
-    // print_table(process_table);
-
-    return SUCCESS;
+    return status;
 }
 
 return_codes save_metrics(msg_data received)
