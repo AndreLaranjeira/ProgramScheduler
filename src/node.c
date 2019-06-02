@@ -29,9 +29,11 @@ int handle_program(msg request);
 int handle_metrics(msg request);
 
 // Global variables
-int node_id, msq_id;        // Node ID and IPC queue ID
-int *adjacent_nodes;        // Dinamically allocated array of integers to the adjacent nodes
-int last_init_job = 0;      // Holds the last run job ID
+int node_id, msq_id;                // Node ID and IPC queue ID
+int *adjacent_nodes = NULL;         // Dinamically allocated array of integers to the adjacent nodes
+int *temp_ptr;                      // Pointer to handle realloc use
+int last_init_job = 0;              // Holds the last run job ID
+int return_code = SUCCESS;          // In the beginning, we do expect everything to behave as planned.
 
 // Main function:
 int main(int argc, char **argv){
@@ -62,36 +64,47 @@ int main(int argc, char **argv){
         exit(INVALID_ARG);
     }
 
+    // Before starting, bind the SIGTERM signal.
+    // Scheduler will use this signal when the program is being terminated or abnormal circunstances
+    signal(SIGTERM, handle_terminate);
+
+    // From now on, the node will execute until SIGTERM signal
     // Allocating array of adjacent nodes. Index 0 holds array size
     adjacent_nodes = (int *) malloc(sizeof(int));
     if(adjacent_nodes == NULL) {
         error(NULL, "[Node %d]: ran out of memory. Dynamic allocation failed.\n");
+        return_code = ALLOC_ERROR;
         kill(getppid(), SIGINT);
+        // Waiting for my death
+        pause();
     }
 
     adjacent_nodes[0] = 0;
 
     // Trying to convert adjacent node arguments to integers
     for(int i = 2; i < argc; i++){
-        adjacent_nodes = (int *) realloc(adjacent_nodes, sizeof(int)*(adjacent_nodes[0] + 2));
-        if(adjacent_nodes == NULL){
+        temp_ptr = (int *) realloc(adjacent_nodes, sizeof(int)*(adjacent_nodes[0] + 2));
+        if(temp_ptr == NULL){
             error(NULL, "[Node %d]: ran out of memory. Dynamic allocation failed.\n");
+            return_code = ALLOC_ERROR;
             kill(getppid(), SIGINT);
+            // Waiting for my death
+            pause();
+        }
+        else {
+            adjacent_nodes = temp_ptr;
         }
 
         adjacent_nodes[0]++;
         adjacent_nodes[i-1] = (int) strtol(argv[i], &error_check, 0);
         if(argv[i] == error_check){
             error(NULL, "[Node %d]: Unable to decode argument '%s' value.\n", node_id, argv[i]);
-            free(adjacent_nodes);
-            exit(INVALID_ARG);
+            return_code = INVALID_ARG;
+            kill(getppid(), SIGINT);
+            // Waiting for my death
+            pause();
         }
     }
-
-    // Before starting, bind the SIGTERM signal.
-    // Scheduler will use this signal when the program is being terminated or the topology is violated
-    signal(SIGTERM, handle_terminate);
-
 
     // Now, node is ready to run.
     // Infinity loop starts, only a signal can finish a node
@@ -121,8 +134,9 @@ int main(int argc, char **argv){
 
 // This function is binded to SIGTERM signal and will handle the termination of node process
 void handle_terminate(){
-    free(adjacent_nodes);
-    exit(SUCCESS);
+    if(adjacent_nodes != NULL)
+        free(adjacent_nodes);
+    exit(return_code);
 }
 
 // Handles a request to execute something
@@ -132,8 +146,6 @@ int handle_program(msg request){
     msg metrics;                    // Message to hold the running process statistics
     msg queue_listening;            // Message to clear node postal box
     time_t rawtime;                 // Variable to grab current CPU time
-    int answer = True;              // Control variable to continue the execution
-
 
     // Eliminating duplicates by executing just higher job IDs
     if(request.data.msg_body.data_prog.job > last_init_job){
@@ -207,11 +219,14 @@ int handle_program(msg request){
         // Error while forking a new process, answer return will break the main loop
         else {
             error(NULL, "[Node %d]: Could not fork a new process. Shutting down...\n", node_id);
-            answer = FORK_ERROR;
+            return_code = FORK_ERROR;
+            kill(getppid(), SIGINT);
+            // Waiting for my death
+            pause();
         }
     }
 
-    return answer;
+    return True;
 }
 
 // Handles a metric message
