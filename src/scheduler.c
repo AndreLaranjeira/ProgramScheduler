@@ -211,7 +211,7 @@ int main(int argc, char **argv){
     destroy_msg_queues();
 
     // Success message:
-    success(CONTEXT, "Scheduler successfully shut down!");
+    success(CONTEXT, "Scheduler successfully shut down!\n");
 
     return 0;
 }
@@ -399,9 +399,9 @@ return_codes print_metrics(scheduler_table* table)
     aux = table->first;
     int node_error;
     char *some_time;
-    double time_aux, best_node_time_seconds;
+    double time_aux, best_node_end_time_seconds;
     time_t time_t_aux;
-    time_measure best_node_time, greatest_node_time, smallest_node_time;
+    time_measure best_node_end_time, greatest_node_end_time, smallest_node_start_time;
 
     while(aux != NULL){
 
@@ -411,28 +411,28 @@ return_codes print_metrics(scheduler_table* table)
 
         // Gets better time, greatest, smallest and verify if any error occurred at nodes
         node_error = 0;
-        best_node_time_seconds = DBL_MAX;
-        smallest_node_time = aux->metrics[0].start_time;
-        greatest_node_time = aux->metrics[0].end_time;
+        best_node_end_time_seconds = DBL_MAX;
+        smallest_node_start_time = aux->metrics[0].start_time;
+        greatest_node_end_time = aux->metrics[0].end_time;
         for (i = 0; i < aux->metrics_idx; i++) {
 
             // gets best time
             time_aux = difftime(mktime(&aux->metrics[i].end_time), mktime(&aux->metrics[i].start_time));
-            if (time_aux < best_node_time_seconds) {
-                best_node_time_seconds = time_aux;
-                best_node_time = aux->metrics[i].end_time;
+            if (time_aux < best_node_end_time_seconds) {
+                best_node_end_time_seconds = time_aux;
+                best_node_end_time = aux->metrics[i].end_time;
             }
 
             // get smallest time
-            time_aux = difftime(mktime(&smallest_node_time), mktime(&aux->metrics[i].start_time));
+            time_aux = difftime(mktime(&smallest_node_start_time), mktime(&aux->metrics[i].start_time));
             if(time_aux > 0){
-                smallest_node_time = aux->metrics[i].start_time;
+                smallest_node_start_time = aux->metrics[i].start_time;
             }
 
             // get greatest time
-            time_aux = difftime(mktime(&greatest_node_time), mktime(&aux->metrics[i].end_time));
+            time_aux = difftime(mktime(&greatest_node_end_time), mktime(&aux->metrics[i].end_time));
             if(time_aux < 0){
-                greatest_node_time = aux->metrics[i].end_time;
+                greatest_node_end_time = aux->metrics[i].end_time;
             }
 
             // check for errors in node
@@ -445,24 +445,24 @@ return_codes print_metrics(scheduler_table* table)
         if (node_error == 0 && aux->done) {
 
             // Calculate and show Turnround Time
-            time_aux = difftime(mktime(&best_node_time), aux->arrival_time);
+            time_aux = difftime(mktime(&greatest_node_end_time), aux->arrival_time);
             printf("Turnaround: %3.0lfs | ", time_aux);
 
             // Calculate and show Scheduler Time
-            time_aux = difftime(mktime(&best_node_time), aux->actual_start_time);
+            time_aux = difftime(mktime(&greatest_node_end_time), aux->actual_start_time);
             printf("Scheduler Time: %3.0lfs | ", time_aux);
 
             // Show Best Node Time
-            printf("Node Time: %3.0lfs | ", best_node_time_seconds);
+            printf("Node Time: %3.0lfs | ", best_node_end_time_seconds);
 
             // Show smallest node start Time
-            time_t_aux = mktime(&smallest_node_time);
+            time_t_aux = mktime(&smallest_node_start_time);
             some_time = ctime(&time_t_aux);
             some_time[(int)strlen(some_time)-1] = '\0';
             printf("Start Node: %s | ", some_time);
 
             // Show greatest node start Time
-            time_t_aux = mktime(&greatest_node_time);
+            time_t_aux = mktime(&greatest_node_end_time);
             some_time = ctime(&time_t_aux);
             some_time[(int)strlen(some_time)-1] = '\0';
             printf("End Node: %s | ", some_time);
@@ -480,7 +480,7 @@ return_codes print_metrics(scheduler_table* table)
         }
 
         // Print Job command
-        printf("Comando: ");
+        printf("command: ");
         for (i = 0; i < aux->argc; i++){
             printf("%s ", aux->argv[i]);
         }
@@ -599,6 +599,8 @@ void fork_nodes(char *const nodes[N_MAX_NODES][N_MAX_PARAMS], int n_nodes){
 
 void initialize_msg_queues(){
 
+    int status1, status2;
+
     // Acquire the top level message queue:
     msqid_top_level = msgget(QUEUE_TOP_LEVEL, IPC_CREAT|0x1FF);
 
@@ -611,6 +613,13 @@ void initialize_msg_queues(){
     }else{
         error(CONTEXT,
               "An error occur trying to create a message queue!\n");
+
+        // Destroy the top level message queue:
+        status1 = msgctl(msqid_top_level, IPC_RMID, NULL);
+
+        // Destroy the nodes message queue:
+        status2 = msgctl(msqid_nodes, IPC_RMID, NULL);
+
         exit(IPC_MSG_QUEUE_CREAT);
     }
 
