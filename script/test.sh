@@ -121,11 +121,11 @@ description "For test purpose we will execute 'dummy' program that sleeps as dem
     subTitle "Run 3 simultaneous executes and send jobs that will not be execute"
     description "This jobs will not be executed because the shutdown will be called first"
         testTitle "Execute './dummy' with sleep: 1s and delay: 40s"
-            run "execute 1 ./dummy 40" &
+            run "execute 1 ./dummy 80" &
         testTitle "Execute './dummy' with sleep: 1s and delay: 50s"
-            run "execute 1 ./dummy 50" &
+            run "execute 1 ./dummy 90" &
         testTitle "Execute './dummy' with sleep: 1s and delay: 60s"
-            run "execute 1 ./dummy 60"
+            run "execute 1 ./dummy 100"
 
         sleep 2     # wait, to not make mess with terminal colors, by background process
 
