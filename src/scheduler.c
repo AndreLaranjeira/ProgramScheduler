@@ -437,7 +437,7 @@ return_codes print_metrics(scheduler_table* table)
 
             // check for errors in node
             if (aux->metrics[i].return_code != 0) {
-                node_error = aux->metrics[i].return_code;
+                node_error = WEXITSTATUS(aux->metrics[i].return_code);
                 break;
             }
         }
