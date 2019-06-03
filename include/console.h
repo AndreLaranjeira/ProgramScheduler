@@ -23,13 +23,24 @@
  *      >> [SUCCESS] A = 10
  * */
 
+ /* Code authors:
+  * André Filipe Caldas Laranjeira - 16/0023777
+  * Hugo Nascimento Fonseca - 16/0008166  (Module creator and maintainer)
+  * José Luiz Gomes Nogueira - 16/0032458
+  * Victor André Gris Costa - 16/0019311
+  */
+
+// Header guard:
 #ifndef CONSOLE_H
 #define CONSOLE_H
 
+// Compiler includes:
 #include <stdio.h>
 #include <stdarg.h>
 
+// Macros:
 
+// Text colors:
 #define TEXT_COLOR_BLACK   "\x1b[30m"
 #define TEXT_COLOR_RED     "\x1b[31m"
 #define TEXT_COLOR_GREEN   "\x1b[32m"
@@ -39,6 +50,7 @@
 #define TEXT_COLOR_CYAN    "\x1b[36m"
 #define TEXT_COLOR_WHITE   "\x1b[37m"
 
+// Background colors:
 #define BKGD_COLOR_BLACK   "\x1b[40m"
 #define BKGD_COLOR_RED     "\x1b[41m"
 #define BKGD_COLOR_GREEN   "\x1b[42m"
@@ -48,6 +60,7 @@
 #define BKGD_COLOR_CYAN    "\x1b[46m"
 #define BKGD_COLOR_WHITE   "\x1b[47m"
 
+// Text blinking colors:
 #define TEXT_BCOLOR_BLACK   "\x1b[90m"
 #define TEXT_BCOLOR_RED     "\x1b[91m"
 #define TEXT_BCOLOR_GREEN   "\x1b[92m"
@@ -57,6 +70,7 @@
 #define TEXT_BCOLOR_CYAN    "\x1b[96m"
 #define TEXT_BCOLOR_WHITE   "\x1b[97m"
 
+// Background blinking colors:
 #define BKGD_BCOLOR_BLACK   "\x1b[100m"
 #define BKGD_BCOLOR_RED     "\x1b[101m"
 #define BKGD_BCOLOR_GREEN   "\x1b[102m"
@@ -66,10 +80,13 @@
 #define BKGD_BCOLOR_CYAN    "\x1b[106m"
 #define BKGD_BCOLOR_WHITE   "\x1b[107m"
 
+// Bold text:
 #define TEXT_BOLD_UNDL   "\x1b[1m"
 
+// Reset colors:
 #define RESET   "\x1b[0m"
 
+// Function implementations:
 static void success(const char *context, const char *msg_fmt, ...){
     if(context != NULL){
         printf("[%s]: ", context);

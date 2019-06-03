@@ -1,20 +1,44 @@
+// Program scheduler - Node process.
+
+/* Code authors:
+ * André Filipe Caldas Laranjeira - 16/0023777
+ * Hugo Nascimento Fonseca - 16/0008166
+ * José Luiz Gomes Nogueira - 16/0032458
+ * Victor André Gris Costa - 16/0019311
+ */
+
+// Compiler includes:
+#include <stdlib.h>
+#include <string.h>
+#include <sys/ipc.h>
+#include <sys/msg.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <unistd.h>
+
 // Project includes:
 #include "console.h"
-#include "node.h"
+#include "data_structures.h"
 
-// Macros
+// Macros:
 #define CONTEXT "Node"
 
+// Function prototypes
+void handle_terminate();
+int handle_program(msg request);
+int handle_metrics(msg request);
+
 // Global variables
-int node_id, msq_id;        // Node ID and IPC queue ID
-int *adjacent_nodes;        // Dinamically allocated array of integers to the adjacent nodes
-int last_init_job = 0;      // Holds the last run job ID
+int node_id, msq_id;                // Node ID and IPC queue ID
+int *adjacent_nodes = NULL;         // Dinamically allocated array of integers to the adjacent nodes
+int *temp_ptr;                      // Pointer to handle realloc use
+int last_init_job = 0;              // Holds the last run job ID
+int return_code = SUCCESS;          // In the beginning, we do expect everything to behave as planned.
 
-
+// Main function:
 int main(int argc, char **argv){
 
     char *error_check;              // Pointer used to detect char to int conversion errors
-    int proceed = True;             // Int to hold the stop condition and will return program stop condition
     msg queue_listening;            // Message variable to receive messages from queue
 
     // Argument amount check
@@ -40,58 +64,79 @@ int main(int argc, char **argv){
         exit(INVALID_ARG);
     }
 
+    // Before starting, bind the SIGTERM signal.
+    // Scheduler will use this signal when the program is being terminated or abnormal circunstances
+    signal(SIGTERM, handle_terminate);
+
+    // From now on, the node will execute until SIGTERM signal
     // Allocating array of adjacent nodes. Index 0 holds array size
     adjacent_nodes = (int *) malloc(sizeof(int));
+    if(adjacent_nodes == NULL) {
+        error(NULL, "[Node %d]: ran out of memory. Dynamic allocation failed.\n");
+        return_code = ALLOC_ERROR;
+        kill(getppid(), SIGINT);
+        // Waiting for my death
+        pause();
+    }
+
     adjacent_nodes[0] = 0;
 
     // Trying to convert adjacent node arguments to integers
     for(int i = 2; i < argc; i++){
-        adjacent_nodes = (int *) realloc(adjacent_nodes, sizeof(int)*(adjacent_nodes[0] + 2));
+        temp_ptr = (int *) realloc(adjacent_nodes, sizeof(int)*(adjacent_nodes[0] + 2));
+        if(temp_ptr == NULL){
+            error(NULL, "[Node %d]: ran out of memory. Dynamic allocation failed.\n");
+            return_code = ALLOC_ERROR;
+            kill(getppid(), SIGINT);
+            // Waiting for my death
+            pause();
+        }
+        else {
+            adjacent_nodes = temp_ptr;
+        }
+
         adjacent_nodes[0]++;
         adjacent_nodes[i-1] = (int) strtol(argv[i], &error_check, 0);
         if(argv[i] == error_check){
             error(NULL, "[Node %d]: Unable to decode argument '%s' value.\n", node_id, argv[i]);
-            free(adjacent_nodes);
-            exit(INVALID_ARG);
+            return_code = INVALID_ARG;
+            kill(getppid(), SIGINT);
+            // Waiting for my death
+            pause();
         }
     }
 
-    // Before starting, bind the SIGTERM signal.
-    // Scheduler will use this signal when the program is being terminated or the topology is violated
-    signal(SIGTERM, handle_terminate);
-
-
-    // Now, node is ready to run. 'Infinity loop' starts
-    while(proceed == True){
+    // Now, node is ready to run.
+    // Infinity loop starts, only a signal can finish a node
+    while(True){
         // Blocked system call. Listening to the message queue
         msgrcv(msq_id, &queue_listening, sizeof(queue_listening.data), node_id, 0);
         // Decoding the received message type
-        if(queue_listening.data.type == KIND_PROGRAM)
-            // Handles a message to execute a program
-            proceed = handle_program(queue_listening);
-        else if(queue_listening.data.type == KIND_METRICS)
-            // Handles a message to return a program metrics
-            proceed = handle_metrics(queue_listening);
-        else {
-            // Received a unknown .type code
-            error(NULL, "[Node %d]: Unknown operation %d received. Aborting...\n", node_id-4, queue_listening.data.type);
-            // Stop the execution by breaking the loop
-            proceed = False;
+        switch (queue_listening.data.type){
+            case KIND_PROGRAM:
+                // Handles a message to execute a program
+                handle_program(queue_listening);
+                break;
+
+            case KIND_METRICS:
+                // Handles a message to return a program metrics
+                handle_metrics(queue_listening);
+                break;
+
+            default:
+                // Received a unknown message type
+                warning(NULL, "[Node %d]: Unknown operation %d received. Ignoring message...\n", node_id, queue_listening.data.type);
+                break;
         }
     }
-
-    // Liberates the array memory
-    free(adjacent_nodes);
-
-    return proceed;
-
 }
 
 
 // This function is binded to SIGTERM signal and will handle the termination of node process
 void handle_terminate(){
-    free(adjacent_nodes);
-    exit(ABORT_RECEIVED);
+    if(adjacent_nodes != NULL)
+        free(adjacent_nodes);
+    exit(return_code);
 }
 
 // Handles a request to execute something
@@ -99,21 +144,19 @@ int handle_program(msg request){
     int ret_state;                  // Variable to wait child process (return value)
     int pid;                        // PID of child process
     msg metrics;                    // Message to hold the running process statistics
+    msg queue_listening;            // Message to clear node postal box
     time_t rawtime;                 // Variable to grab current CPU time
-    int answer = True;              // Control variable to continue the execution
-
 
     // Eliminating duplicates by executing just higher job IDs
     if(request.data.msg_body.data_prog.job > last_init_job){
-        printf("No %d recebeu pedido para o job %d\n", node_id-4, request.data.msg_body.data_prog.job);                 /* TODO: remove debug printing */
+        #if DEBUG_LEVEL >= 2
+          printf("No %d recebeu pedido para o job %d\n", node_id, request.data.msg_body.data_prog.job);
+        #endif
         // Broadcast execution message to neighbors
         for(int i = 1; i <= adjacent_nodes[0]; i++){
-            if(adjacent_nodes[i] != QUEUE_ID_SCHEDULER) {
+            if(adjacent_nodes[i] != QUEUE_ID_SCHEDULER && adjacent_nodes[i] != request.recipient) {
                 request.recipient = adjacent_nodes[i];
-                if(msgsnd(msq_id, &request, sizeof(request.data), 0) == 0)                                              /* TODO: remove debug printing */
-                    printf("No %d broadcast para o nó %d\n", node_id-4, adjacent_nodes[i]-4);
-                else
-                    printf("No %d falhou no broadcast\n", node_id-4);
+                msgsnd(msq_id, &request, sizeof(request.data), 0);
             }
         }
 
@@ -131,16 +174,15 @@ int handle_program(msg request){
         pid = fork();
         // Child process will load the new executable, via execvp
         if(pid == 0){
-            char* argv[DATA_PROGRAM_MAX_ARG_NUM + 1];
+            // Assembling array of char pointers
+            char* argv[MAX_ARG_NUM + 1];
             for (int i = 0; i < request.data.msg_body.data_prog.argc; ++i)
                 argv[i] = (char *) &(request.data.msg_body.data_prog.argv[i]);
             argv[request.data.msg_body.data_prog.argc] = (char *) NULL;
 
-            /*TODO: Fix the execvp system call*/
             // execvp(full_path_of_executable, argv); argv[0] = full_path_of_executable
             execvp(argv[0], (char * const *) argv);
-            printf("errno: %d\n", errno);                                                                               /* TODO: remove debug printing */
-            error(NULL, "[Node %d]: Node could not start required executable. Exiting with error code %d...\n", node_id-4,
+            error(NULL, "[Node %d]: Node could not start required executable %s. Exiting with error code %d...\n", node_id, argv[0],
                     EXEC_FAILED);
             exit(EXEC_FAILED);
         }
@@ -153,44 +195,52 @@ int handle_program(msg request){
             time(&rawtime);
             metrics.data.msg_body.data_metrics.end_time = *localtime(&rawtime);
 
+
+            // Node clears it's postal box to avoid resource exhaustion
+            while(msgrcv(msq_id, &queue_listening, sizeof(queue_listening.data), node_id, IPC_NOWAIT) == 0){
+                if(queue_listening.data.type == KIND_METRICS)
+                    handle_metrics(queue_listening);
+            }
+
             // Stores the child process return code
             metrics.data.msg_body.data_metrics.return_code = ret_state;
 
             // Sets message type to metrics
             metrics.data.type = KIND_METRICS;
-            printf("Nó %d está com as métricas prontas!\n", node_id-4);
+
+            #if DEBUG_LEVEL >= 1
+              printf("Nó %d está com as métricas prontas!\n", node_id);
+            #endif
 
             // Send the message to the lower node
             metrics.recipient = adjacent_nodes[1];
-            if(msgsnd(msq_id, &metrics, sizeof(metrics.data), 0) == 0)                                                  /* TODO: remove debug printing */
-                printf("No %d enviando métricas para o nó %d\n", node_id-4, adjacent_nodes[1]-4);
-            else
-                printf("No %d falhou ao retornar métricas\n", node_id-4);
+            msgsnd(msq_id, &metrics, sizeof(metrics.data), 0);
         }
         // Error while forking a new process, answer return will break the main loop
         else {
             error(NULL, "[Node %d]: Could not fork a new process. Shutting down...\n", node_id);
-            answer = FORK_ERROR;
+            return_code = FORK_ERROR;
+            kill(getppid(), SIGINT);
+            // Waiting for my death
+            pause();
         }
     }
-    else
-        printf("No %d recebeu pedido de programa ja executado\n", node_id-4);                                           /* TODO: remove debug printing */
 
-    return answer;
+    return True;
 }
 
 // Handles a metric message
 int handle_metrics(msg request){
-    printf("No %d recebeu uma métrica\n", node_id-4);                                                                   /* TODO: remove debug printing */
+    #if DEBUG_LEVEL >= 2
+      printf("No %d recebeu uma métrica\n", node_id);
+    #endif
+
     // last_init_job variable is updated at handle_program function
     if(request.data.msg_body.data_metrics.job >= last_init_job){
         // Gets the lower neighbor ID
         // Here I'm assuming that the scheduler ID is always lower than any node
         request.recipient = adjacent_nodes[1];
-        if(msgsnd(msq_id, &request, sizeof(request.data), 0) == 0)
-            printf("No %d encaminhou métricas para o no %d\n", node_id-4, adjacent_nodes[1]-4);                         /* TODO: remove debug printing */
-        else
-            printf("No %d falhou ao encaminhar métrica\n", node_id-4);
+        msgsnd(msq_id, &request, sizeof(request.data), 0);
     }
     // Return clause possible of expansion in future
     return True;

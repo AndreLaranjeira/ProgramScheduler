@@ -1,5 +1,12 @@
 // Program scheduler - Shutdown process.
 
+/* Code authors:
+ * André Filipe Caldas Laranjeira - 16/0023777
+ * Hugo Nascimento Fonseca - 16/0008166
+ * José Luiz Gomes Nogueira - 16/0032458
+ * Victor André Gris Costa - 16/0019311
+ */
+
 // Compiler includes:
 #include <signal.h>
 #include <stdio.h>
@@ -17,7 +24,6 @@
 
 int main(){
 
-
     // Variable declaration:
     key_t msqid;
     msg received_msg;
@@ -34,12 +40,12 @@ int main(){
 
     // Acquire a message from the message queue (it should be the scheduler PID):
     if(msgrcv(msqid, &received_msg, sizeof(received_msg.data), QUEUE_ID_SHUTDOWN,
-            IPC_NOWAIT) == -1) {
+              IPC_NOWAIT) == -1) {
 
-    // If there are no messages left, there was a problem!
-    error(CONTEXT,
-            "Did not receive scheduler process ID! Please try again.\n");
-    exit(IPC_MSG_QUEUE_RECEIVE);
+        // If there are no messages left, there was a problem!
+        error(CONTEXT,
+                "Did not receive scheduler process ID! Please try again.\n");
+        exit(UNKNOWN_SCHEDULER_PID);
 
     }
 
@@ -53,13 +59,13 @@ int main(){
         else {
           error(CONTEXT,
                   "Did not receive scheduler process ID! Please try again.\n");
-          exit(IPC_MSG_QUEUE_RECEIVE);
+          exit(UNKNOWN_SCHEDULER_PID);
         }
     }
     else {
         error(CONTEXT,
                 "Did not receive scheduler process ID! Please try again.\n");
-        exit(IPC_MSG_QUEUE_RECEIVE);
+        exit(UNKNOWN_SCHEDULER_PID);
     }
 
     return 0;
