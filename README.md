@@ -2,30 +2,29 @@
 
 ## Descrição
 
-Programa para escalonar a execução postergada de outros
-programas multi-processo. Permite a configuração do
-tempo mínimo de atraso da execução de um programa e da
-topologia utilizada pelo escalonador de processos.
-Trabalho final da disciplina de Sistemas Operacionais
-2019/1 da Universidade de Brasília.
+Programa para escalonar a execução postergada de outros programas em uma
+topologia de nós com o intuito de recolher métricas de execução. Permite a
+configuração do tempo mínimo de atraso da execução de um programa e da topologia
+utilizada pelo escalonador de processos. Trabalho final da disciplina de
+Sistemas operacionais 2019/1 da Universidade de Brasília.
 
 ## Integrantes
 
-Nome                     | Matrícula
------------------------- | ----------
-André Laranjeira         | 16/0023777
-Hugo Nascimento Fonseca  | 16/0008166
-José Luiz Gomes Nogueira | 16/0032458
-Victor André Gris Costa  | 16/0019311
+Nome                            | Matrícula
+------------------------------- | ----------
+André Filipe Caldas Laranjeira  | 16/0023777
+Hugo Nascimento Fonseca         | 16/0008166
+José Luiz Gomes Nogueira        | 16/0032458
+Victor André Gris Costa         | 16/0019311
 
 ## Ambiente de execução esperado
 
-* Ambiente Linux com suporte a filas de mensagens
+* Ambiente Linux com suporte a filas de mensagens.
 
 ## Instruções de compilação
 
-1. Entre na pasta raiz do projeto
-2. Execute o comando `cmake CMakeLists.txt -DCMAKE_BUILD_TYPE=<Debug ou Release>`
+1. Entre na pasta raiz do projeto.
+2. Execute o comando `cmake CMakeLists.txt -DCMAKE_BUILD_TYPE=<Debug ou Release>`.
 3. Execute `make [nome do executável]` para compilar um
    executável específico ou `make all` para compilar
    todos os executáveis.
