@@ -34,7 +34,7 @@ Victor André Gris Costa         | 16/0019311
 1. Inicie o escalonador a partir da pasta raiz do projeto
    com `./scheduler <nome da topologia>` sendo que
    `<nome da topologia>` pode ser `tree`, `torus` e
-   `hypercube`
+   `hypercube`.
 2. Adicione programas para execução com o comando
    `./execute <caminho para programa> <argumentos opcionais> <espera em segundos>`. O caminho pode ser
    relativo ou absoluto a espera deve ser um número
