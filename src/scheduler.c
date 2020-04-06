@@ -519,16 +519,14 @@ return_codes treat_message(msg received, msg_kind kind)
     switch (kind)
     {
         case KIND_PROGRAM:
-            add_table(received.data);
-            break;
+            return add_table(received.data);
 
         case KIND_METRICS:
-            save_metrics(received.data);
-            break;
+            return save_metrics(received.data);
 
         case KIND_PID:
         case KIND_ERROR:
-        default:
+        case KIND_JOB:
             return INVALID_ARG;
     }
 }

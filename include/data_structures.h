@@ -61,8 +61,8 @@
 #define END_PARAMS (char*) NULL
 
 // Fixed argument number and length for the msg_data_program data type:
-#define MAX_ARG_NUM 20
-#define MAX_ARG_LEN 20
+#define MAX_ARG_NUM 5
+#define MAX_ARG_LEN 30
 
 // Job control macros:
 #define FIRST_JOB_NUM (1)
